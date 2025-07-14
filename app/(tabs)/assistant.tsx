@@ -1,4 +1,4 @@
-import { useUserStore } from "@/store/user-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useNutritionStore } from "@/store/nutrition-store";
 import Colors from "@/constants/colors";
 import { useRouter } from "expo-router";
@@ -49,7 +49,7 @@ interface QuickAction {
 
 export default function AssistantScreen() {
   const router = useRouter();
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   const { getDailyNutrition } = useNutritionStore();
   const { theme } = useThemeStore();
   const [messages, setMessages] = useState<Message[]>([]);

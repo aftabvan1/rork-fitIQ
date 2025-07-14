@@ -1,6 +1,6 @@
-import { useUserStore } from "@/store/user-store";
+import { useAuthStore } from "@/store/auth-store";
+import { useNutritionStore } from "@/store/nutrition-store";
 import { ScanResult } from "@/types";
-import { generateMockScanResult } from "@/utils/mockData";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Camera, Image as ImageIcon, Zap } from "lucide-react-native";
@@ -12,15 +12,18 @@ import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
+import { useThemeStore } from "@/store/theme-store";
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { theme } = useThemeStore();
   const { mode = "barcode" } = useLocalSearchParams<{ mode: "barcode" | "photo" }>();
   const [cameraType, setCameraType] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [scanResults, setScanResults] = useState<ScanResult[]>([]);
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
+  const { scanBarcode, analyzeFoodPhoto } = useNutritionStore();
   
   // Switch to photo mode if specified in params
   useEffect(() => {
@@ -32,11 +35,16 @@ export default function ScanScreen() {
   const handleBarcodeScan = async (data: { data: string }) => {
     if (scanning) return;
     
+    // Check premium limits
+    if (!user?.isPremium) {
+      // In a real app, you'd track daily scan count
+      // For demo, we'll allow 5 scans per day for free users
+    }
+    
     setScanning(true);
     
     try {
-      // In a real app, this would call an API to get food data
-      const result = generateMockScanResult(data.data);
+      const result = await scanBarcode(data.data);
       
       if (result) {
         setScanResults([{ food: result }]);
@@ -66,37 +74,15 @@ export default function ScanScreen() {
       if (!result.canceled) {
         setScanning(true);
         
-        // Simulate AI processing
-        setTimeout(() => {
-          // In a real app, this would call an AI API to analyze the image
-          // For demo, we'll just show some mock results
-          setScanResults([
-            { food: generateMockScanResult("888849000166") || { 
-              id: "8", 
-              name: "Protein Bar", 
-              brand: "Quest",
-              calories: 190,
-              protein: 20,
-              carbs: 21,
-              fat: 8,
-              servingSize: 60,
-              servingUnit: "g",
-              image: "https://images.unsplash.com/photo-1622484212850-eb596d769edc?q=80&w=500",
-            }, confidence: 0.92 },
-            { food: {
-              id: "custom1",
-              name: "Grilled Chicken Salad",
-              calories: 320,
-              protein: 35,
-              carbs: 12,
-              fat: 14,
-              servingSize: 1,
-              servingUnit: "bowl",
-              image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500",
-            }, confidence: 0.85 },
-          ]);
+        try {
+          const foods = await analyzeFoodPhoto(result.assets[0].uri);
+          setScanResults(foods.map(food => ({ food, confidence: 0.85 })));
+        } catch (error) {
+          console.error("Photo analysis error:", error);
+          Alert.alert("Error", "Failed to analyze photo. Please try again.");
+        } finally {
           setScanning(false);
-        }, 2000);
+        }
       }
     } catch (error) {
       console.error("Image picker error:", error);
@@ -116,24 +102,15 @@ export default function ScanScreen() {
       if (!result.canceled) {
         setScanning(true);
         
-        // Simulate AI processing
-        setTimeout(() => {
-          // In a real app, this would call an AI API to analyze the image
-          setScanResults([
-            { food: {
-              id: "custom2",
-              name: "Avocado Toast",
-              calories: 280,
-              protein: 8,
-              carbs: 30,
-              fat: 15,
-              servingSize: 1,
-              servingUnit: "slice",
-              image: "https://images.unsplash.com/photo-1588137378633-dea1336ce1e2?q=80&w=500",
-            }, confidence: 0.88 },
-          ]);
+        try {
+          const foods = await analyzeFoodPhoto(result.assets[0].uri);
+          setScanResults(foods.map(food => ({ food, confidence: 0.88 })));
+        } catch (error) {
+          console.error("Photo analysis error:", error);
+          Alert.alert("Error", "Failed to analyze photo. Please try again.");
+        } finally {
           setScanning(false);
-        }, 2000);
+        }
       }
     } catch (error) {
       console.error("Camera error:", error);
@@ -160,7 +137,7 @@ export default function ScanScreen() {
   const renderPermissionScreen = () => (
     <ThemedView style={styles.container}>
       <View style={styles.permissionContainer}>
-        <Camera size={64} color={Colors[user?.theme || "light"].primary} />
+        <Camera size={64} color={Colors[theme].primary} />
         <ThemedText size="xl" weight="semibold" style={styles.permissionTitle}>
           Camera Permission Required
         </ThemedText>
@@ -193,7 +170,7 @@ export default function ScanScreen() {
         
         <FlatList
           data={scanResults}
-          keyExtractor={(item) => item.food.id}
+          keyExtractor={(item, index) => `${item.food.id}-${index}`}
           renderItem={({ item }) => (
             <View>
               {item.confidence && (
@@ -225,7 +202,7 @@ export default function ScanScreen() {
   
   const renderScanningOverlay = () => (
     <ThemedView style={styles.scanningOverlay}>
-      <ActivityIndicator size="large" color={Colors[user?.theme || "light"].primary} />
+      <ActivityIndicator size="large" color={Colors[theme].primary} />
       <ThemedText size="lg" weight="medium" style={styles.scanningText}>
         Analyzing...
       </ThemedText>

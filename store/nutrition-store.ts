@@ -1,15 +1,21 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { apiService } from '@/services/api';
 import { DailyNutrition, Food, MealEntry, MealType } from '@/types';
 
 interface NutritionState {
   dailyLogs: Record<string, DailyNutrition>;
   recentFoods: Food[];
-  addMealEntry: (entry: Omit<MealEntry, 'id' | 'createdAt'>) => void;
-  removeMealEntry: (entryId: string, date: string) => void;
-  updateMealEntry: (entry: MealEntry) => void;
-  addRecentFood: (food: Food) => void;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions
+  fetchDailyNutrition: (date: string) => Promise<void>;
+  addMealEntry: (entry: Omit<MealEntry, 'id' | 'createdAt'>) => Promise<void>;
+  updateMealEntry: (entry: MealEntry) => Promise<void>;
+  removeMealEntry: (entryId: string, date: string) => Promise<void>;
+  searchFood: (query: string) => Promise<Food[]>;
+  scanBarcode: (barcode: string) => Promise<Food | null>;
+  analyzeFoodPhoto: (imageUri: string) => Promise<Food[]>;
   getDailyNutrition: (date: string) => DailyNutrition;
 }
 
@@ -27,186 +33,221 @@ const createEmptyDailyNutrition = (date: string): DailyNutrition => ({
   },
 });
 
-// Generate unique ID with timestamp and random string
-const generateUniqueId = () => {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-};
+export const useNutritionStore = create<NutritionState>((set, get) => ({
+  dailyLogs: {},
+  recentFoods: [],
+  isLoading: false,
+  error: null,
 
-export const useNutritionStore = create<NutritionState>()(
-  persist(
-    (set, get) => ({
-      dailyLogs: {},
-      recentFoods: [],
+  fetchDailyNutrition: async (date: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await apiService.getDailyNutrition(date);
+      const dailyNutrition = response.data || createEmptyDailyNutrition(date);
       
-      addMealEntry: (entry) => {
-        const { date, food, quantity, mealType } = entry;
-        const id = generateUniqueId();
-        const createdAt = new Date().toISOString();
-        const newEntry: MealEntry = { ...entry, id, createdAt };
+      set((state) => ({
+        dailyLogs: {
+          ...state.dailyLogs,
+          [date]: dailyNutrition,
+        },
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Fetch daily nutrition error:', error);
+      set({ 
+        error: 'Failed to fetch nutrition data',
+        isLoading: false,
+        dailyLogs: {
+          ...get().dailyLogs,
+          [date]: createEmptyDailyNutrition(date),
+        },
+      });
+    }
+  },
+
+  addMealEntry: async (entry) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await apiService.addMealEntry(entry);
+      const newEntry = response.data;
+      
+      // Update local state
+      const { date, mealType } = entry;
+      set((state) => {
+        const currentLog = state.dailyLogs[date] || createEmptyDailyNutrition(date);
+        const calories = entry.food.calories * entry.quantity;
+        const protein = entry.food.protein * entry.quantity;
+        const carbs = entry.food.carbs * entry.quantity;
+        const fat = entry.food.fat * entry.quantity;
         
-        set((state) => {
-          const currentLog = state.dailyLogs[date] || createEmptyDailyNutrition(date);
-          
-          // Calculate nutrition totals
-          const calories = food.calories * quantity;
-          const protein = food.protein * quantity;
-          const carbs = food.carbs * quantity;
-          const fat = food.fat * quantity;
-          
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: {
-                ...currentLog,
-                calories: currentLog.calories + calories,
-                protein: currentLog.protein + protein,
-                carbs: currentLog.carbs + carbs,
-                fat: currentLog.fat + fat,
-                meals: {
-                  ...currentLog.meals,
-                  [mealType]: [...currentLog.meals[mealType], newEntry],
-                },
+        return {
+          dailyLogs: {
+            ...state.dailyLogs,
+            [date]: {
+              ...currentLog,
+              calories: currentLog.calories + calories,
+              protein: currentLog.protein + protein,
+              carbs: currentLog.carbs + carbs,
+              fat: currentLog.fat + fat,
+              meals: {
+                ...currentLog.meals,
+                [mealType]: [...currentLog.meals[mealType], newEntry],
               },
             },
-          };
-        });
+          },
+          recentFoods: [entry.food, ...state.recentFoods.filter(f => f.id !== entry.food.id)].slice(0, 20),
+          isLoading: false,
+        };
+      });
+    } catch (error) {
+      console.error('Add meal entry error:', error);
+      set({ error: 'Failed to add meal entry', isLoading: false });
+      throw error;
+    }
+  },
+
+  updateMealEntry: async (entry) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.updateMealEntry(entry.id, entry);
+      
+      // Update local state
+      set((state) => {
+        const { date, mealType } = entry;
+        const currentLog = state.dailyLogs[date];
+        if (!currentLog) return state;
         
-        // Add to recent foods
-        get().addRecentFood(food);
-      },
-      
-      removeMealEntry: (entryId, date) => {
-        set((state) => {
-          const currentLog = state.dailyLogs[date];
-          if (!currentLog) return state;
-          
-          let updatedLog = { ...currentLog };
-          
-          // Find and remove the entry
-          for (const mealType of ['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]) {
-            const entryIndex = currentLog.meals[mealType].findIndex(
-              (entry) => entry.id === entryId
-            );
-            
-            if (entryIndex !== -1) {
-              const entry = currentLog.meals[mealType][entryIndex];
-              const calories = entry.food.calories * entry.quantity;
-              const protein = entry.food.protein * entry.quantity;
-              const carbs = entry.food.carbs * entry.quantity;
-              const fat = entry.food.fat * entry.quantity;
-              
-              updatedLog = {
-                ...updatedLog,
-                calories: updatedLog.calories - calories,
-                protein: updatedLog.protein - protein,
-                carbs: updatedLog.carbs - carbs,
-                fat: updatedLog.fat - fat,
-                meals: {
-                  ...updatedLog.meals,
-                  [mealType]: [
-                    ...updatedLog.meals[mealType].slice(0, entryIndex),
-                    ...updatedLog.meals[mealType].slice(entryIndex + 1),
-                  ],
-                },
-              };
-              
-              break;
-            }
-          }
-          
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: updatedLog,
+        const entryIndex = currentLog.meals[mealType].findIndex(e => e.id === entry.id);
+        if (entryIndex === -1) return state;
+        
+        const oldEntry = currentLog.meals[mealType][entryIndex];
+        
+        // Calculate nutrition differences
+        const oldCalories = oldEntry.food.calories * oldEntry.quantity;
+        const oldProtein = oldEntry.food.protein * oldEntry.quantity;
+        const oldCarbs = oldEntry.food.carbs * oldEntry.quantity;
+        const oldFat = oldEntry.food.fat * oldEntry.quantity;
+        
+        const newCalories = entry.food.calories * entry.quantity;
+        const newProtein = entry.food.protein * entry.quantity;
+        const newCarbs = entry.food.carbs * entry.quantity;
+        const newFat = entry.food.fat * entry.quantity;
+        
+        const updatedMeals = [...currentLog.meals[mealType]];
+        updatedMeals[entryIndex] = entry;
+        
+        return {
+          dailyLogs: {
+            ...state.dailyLogs,
+            [date]: {
+              ...currentLog,
+              calories: currentLog.calories - oldCalories + newCalories,
+              protein: currentLog.protein - oldProtein + newProtein,
+              carbs: currentLog.carbs - oldCarbs + newCarbs,
+              fat: currentLog.fat - oldFat + newFat,
+              meals: {
+                ...currentLog.meals,
+                [mealType]: updatedMeals,
+              },
             },
-          };
-        });
-      },
+          },
+          isLoading: false,
+        };
+      });
+    } catch (error) {
+      console.error('Update meal entry error:', error);
+      set({ error: 'Failed to update meal entry', isLoading: false });
+      throw error;
+    }
+  },
+
+  removeMealEntry: async (entryId, date) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.deleteMealEntry(entryId);
       
-      updateMealEntry: (updatedEntry) => {
-        set((state) => {
-          const { date, id, mealType } = updatedEntry;
-          const currentLog = state.dailyLogs[date];
-          if (!currentLog) return state;
-          
-          let updatedLog = { ...currentLog };
-          
-          // Find the entry to update
-          const entryIndex = currentLog.meals[mealType].findIndex(
-            (entry) => entry.id === id
-          );
+      // Update local state
+      set((state) => {
+        const currentLog = state.dailyLogs[date];
+        if (!currentLog) return state;
+        
+        let updatedLog = { ...currentLog };
+        
+        // Find and remove the entry
+        for (const mealType of ['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]) {
+          const entryIndex = currentLog.meals[mealType].findIndex(e => e.id === entryId);
           
           if (entryIndex !== -1) {
-            const oldEntry = currentLog.meals[mealType][entryIndex];
-            
-            // Calculate nutrition differences
-            const oldCalories = oldEntry.food.calories * oldEntry.quantity;
-            const oldProtein = oldEntry.food.protein * oldEntry.quantity;
-            const oldCarbs = oldEntry.food.carbs * oldEntry.quantity;
-            const oldFat = oldEntry.food.fat * oldEntry.quantity;
-            
-            const newCalories = updatedEntry.food.calories * updatedEntry.quantity;
-            const newProtein = updatedEntry.food.protein * updatedEntry.quantity;
-            const newCarbs = updatedEntry.food.carbs * updatedEntry.quantity;
-            const newFat = updatedEntry.food.fat * updatedEntry.quantity;
+            const entry = currentLog.meals[mealType][entryIndex];
+            const calories = entry.food.calories * entry.quantity;
+            const protein = entry.food.protein * entry.quantity;
+            const carbs = entry.food.carbs * entry.quantity;
+            const fat = entry.food.fat * entry.quantity;
             
             updatedLog = {
               ...updatedLog,
-              calories: updatedLog.calories - oldCalories + newCalories,
-              protein: updatedLog.protein - oldProtein + newProtein,
-              carbs: updatedLog.carbs - oldCarbs + newCarbs,
-              fat: updatedLog.fat - oldFat + newFat,
+              calories: updatedLog.calories - calories,
+              protein: updatedLog.protein - protein,
+              carbs: updatedLog.carbs - carbs,
+              fat: updatedLog.fat - fat,
               meals: {
                 ...updatedLog.meals,
                 [mealType]: [
                   ...updatedLog.meals[mealType].slice(0, entryIndex),
-                  updatedEntry,
                   ...updatedLog.meals[mealType].slice(entryIndex + 1),
                 ],
               },
             };
+            break;
           }
-          
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: updatedLog,
-            },
-          };
-        });
-      },
-      
-      addRecentFood: (food) => {
-        set((state) => {
-          // Check if food already exists in recent foods
-          const existingIndex = state.recentFoods.findIndex(
-            (item) => item.id === food.id
-          );
-          
-          let updatedRecentFoods;
-          if (existingIndex !== -1) {
-            // Move to the front if it exists
-            updatedRecentFoods = [
-              food,
-              ...state.recentFoods.slice(0, existingIndex),
-              ...state.recentFoods.slice(existingIndex + 1),
-            ];
-          } else {
-            // Add to the front, limit to 20 items
-            updatedRecentFoods = [food, ...state.recentFoods].slice(0, 20);
-          }
-          
-          return { recentFoods: updatedRecentFoods };
-        });
-      },
-      
-      getDailyNutrition: (date) => {
-        return get().dailyLogs[date] || createEmptyDailyNutrition(date);
-      },
-    }),
-    {
-      name: 'nutrition-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+        }
+        
+        return {
+          dailyLogs: {
+            ...state.dailyLogs,
+            [date]: updatedLog,
+          },
+          isLoading: false,
+        };
+      });
+    } catch (error) {
+      console.error('Remove meal entry error:', error);
+      set({ error: 'Failed to remove meal entry', isLoading: false });
+      throw error;
     }
-  )
-);
+  },
+
+  searchFood: async (query: string) => {
+    try {
+      const response = await apiService.searchFood(query);
+      return response.data || [];
+    } catch (error) {
+      console.error('Search food error:', error);
+      return [];
+    }
+  },
+
+  scanBarcode: async (barcode: string) => {
+    try {
+      const response = await apiService.getFoodByBarcode(barcode);
+      return response.data || null;
+    } catch (error) {
+      console.error('Scan barcode error:', error);
+      return null;
+    }
+  },
+
+  analyzeFoodPhoto: async (imageUri: string) => {
+    try {
+      const response = await apiService.analyzeFoodPhoto(imageUri);
+      return response.data || [];
+    } catch (error) {
+      console.error('Analyze food photo error:', error);
+      return [];
+    }
+  },
+
+  getDailyNutrition: (date: string) => {
+    return get().dailyLogs[date] || createEmptyDailyNutrition(date);
+  },
+}));

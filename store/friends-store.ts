@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { apiService } from '@/services/api';
 
 export interface Friend {
   id: string;
@@ -35,196 +34,144 @@ interface FriendsState {
   friends: Friend[];
   friendRequests: Friend[];
   friendActivities: FriendActivity[];
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions
+  fetchFriends: () => Promise<void>;
+  fetchFriendRequests: () => Promise<void>;
+  fetchFriendActivities: () => Promise<void>;
   addFriend: (email: string) => Promise<boolean>;
-  acceptFriendRequest: (friendId: string) => void;
-  rejectFriendRequest: (friendId: string) => void;
-  removeFriend: (friendId: string) => void;
+  acceptFriendRequest: (friendId: string) => Promise<void>;
+  rejectFriendRequest: (friendId: string) => Promise<void>;
+  removeFriend: (friendId: string) => Promise<void>;
   getFriendById: (friendId: string) => Friend | undefined;
-  addFriendActivity: (activity: Omit<FriendActivity, 'id'>) => void;
   getFriendActivities: (limit?: number) => FriendActivity[];
 }
 
-// Mock friends data for demo
-const mockFriends: Friend[] = [
-  {
-    id: 'friend1',
-    name: 'Sarah Johnson',
-    email: 'sarah@example.com',
-    profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b9c5e8e1?q=80&w=150',
-    status: 'accepted',
-    addedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    streak: 12,
-    totalWorkouts: 45,
-    currentGoals: {
-      calories: 1800,
-      protein: 120,
-      carbs: 180,
-      fat: 60,
-    },
-  },
-  {
-    id: 'friend2',
-    name: 'Mike Chen',
-    email: 'mike@example.com',
-    profilePicture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150',
-    status: 'accepted',
-    addedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    lastActive: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    streak: 8,
-    totalWorkouts: 32,
-    currentGoals: {
-      calories: 2200,
-      protein: 160,
-      carbs: 220,
-      fat: 75,
-    },
-  },
-  {
-    id: 'friend3',
-    name: 'Emma Wilson',
-    email: 'emma@example.com',
-    profilePicture: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150',
-    status: 'accepted',
-    addedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-    lastActive: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    streak: 15,
-    totalWorkouts: 67,
-    currentGoals: {
-      calories: 1900,
-      protein: 130,
-      carbs: 190,
-      fat: 65,
-    },
-  },
-];
+export const useFriendsStore = create<FriendsState>((set, get) => ({
+  friends: [],
+  friendRequests: [],
+  friendActivities: [],
+  isLoading: false,
+  error: null,
 
-const mockFriendRequests: Friend[] = [
-  {
-    id: 'request1',
-    name: 'Alex Rodriguez',
-    email: 'alex@example.com',
-    profilePicture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150',
-    status: 'pending',
-    addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const mockActivities: FriendActivity[] = [
-  {
-    id: 'activity1',
-    friendId: 'friend1',
-    friendName: 'Sarah Johnson',
-    friendProfilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b9c5e8e1?q=80&w=150',
-    type: 'workout',
-    description: 'completed a 45-minute strength training session',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'activity2',
-    friendId: 'friend2',
-    friendName: 'Mike Chen',
-    friendProfilePicture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150',
-    type: 'streak',
-    description: 'reached an 8-day logging streak! 🔥',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'activity3',
-    friendId: 'friend3',
-    friendName: 'Emma Wilson',
-    friendProfilePicture: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150',
-    type: 'goal_achieved',
-    description: 'hit their protein goal for the day! 💪',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'activity4',
-    friendId: 'friend1',
-    friendName: 'Sarah Johnson',
-    friendProfilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b9c5e8e1?q=80&w=150',
-    type: 'meal',
-    description: 'logged a healthy quinoa bowl for lunch',
-    timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-export const useFriendsStore = create<FriendsState>()(
-  persist(
-    (set, get) => ({
-      friends: mockFriends,
-      friendRequests: mockFriendRequests,
-      friendActivities: mockActivities,
-      
-      addFriend: async (email: string) => {
-        // In a real app, this would make an API call
-        // For demo, we'll simulate finding a user
-        const mockUser: Friend = {
-          id: `friend_${Date.now()}`,
-          name: email.split('@')[0],
-          email,
-          status: 'pending',
-          addedAt: new Date().toISOString(),
-        };
-        
-        set((state) => ({
-          friendRequests: [...state.friendRequests, mockUser],
-        }));
-        
-        return true;
-      },
-      
-      acceptFriendRequest: (friendId: string) => {
-        set((state) => {
-          const request = state.friendRequests.find(r => r.id === friendId);
-          if (!request) return state;
-          
-          const newFriend: Friend = {
-            ...request,
-            status: 'accepted',
-          };
-          
-          return {
-            friends: [...state.friends, newFriend],
-            friendRequests: state.friendRequests.filter(r => r.id !== friendId),
-          };
-        });
-      },
-      
-      rejectFriendRequest: (friendId: string) => {
-        set((state) => ({
-          friendRequests: state.friendRequests.filter(r => r.id !== friendId),
-        }));
-      },
-      
-      removeFriend: (friendId: string) => {
-        set((state) => ({
-          friends: state.friends.filter(f => f.id !== friendId),
-        }));
-      },
-      
-      getFriendById: (friendId: string) => {
-        return get().friends.find(f => f.id === friendId);
-      },
-      
-      addFriendActivity: (activity) => {
-        const newActivity: FriendActivity = {
-          ...activity,
-          id: `activity_${Date.now()}`,
-        };
-        
-        set((state) => ({
-          friendActivities: [newActivity, ...state.friendActivities].slice(0, 50), // Keep last 50 activities
-        }));
-      },
-      
-      getFriendActivities: (limit = 10) => {
-        return get().friendActivities.slice(0, limit);
-      },
-    }),
-    {
-      name: 'friends-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+  fetchFriends: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await apiService.getFriends();
+      set({ 
+        friends: response.data || [],
+        isLoading: false 
+      });
+    } catch (error) {
+      console.error('Fetch friends error:', error);
+      set({ 
+        error: 'Failed to fetch friends',
+        isLoading: false 
+      });
     }
-  )
-);
+  },
+
+  fetchFriendRequests: async () => {
+    try {
+      const response = await apiService.getFriendRequests();
+      set({ friendRequests: response.data || [] });
+    } catch (error) {
+      console.error('Fetch friend requests error:', error);
+    }
+  },
+
+  fetchFriendActivities: async () => {
+    try {
+      const response = await apiService.getFriendActivities();
+      set({ friendActivities: response.data || [] });
+    } catch (error) {
+      console.error('Fetch friend activities error:', error);
+    }
+  },
+
+  addFriend: async (email: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.sendFriendRequest(email);
+      set({ isLoading: false });
+      return true;
+    } catch (error) {
+      console.error('Add friend error:', error);
+      set({ 
+        error: 'Failed to send friend request',
+        isLoading: false 
+      });
+      return false;
+    }
+  },
+
+  acceptFriendRequest: async (friendId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.acceptFriendRequest(friendId);
+      
+      // Move from requests to friends
+      set((state) => {
+        const request = state.friendRequests.find(r => r.id === friendId);
+        if (!request) return state;
+
+        const newFriend: Friend = {
+          ...request,
+          status: 'accepted',
+        };
+
+        return {
+          friends: [...state.friends, newFriend],
+          friendRequests: state.friendRequests.filter(r => r.id !== friendId),
+          isLoading: false,
+        };
+      });
+    } catch (error) {
+      console.error('Accept friend request error:', error);
+      set({ 
+        error: 'Failed to accept friend request',
+        isLoading: false 
+      });
+    }
+  },
+
+  rejectFriendRequest: async (friendId: string) => {
+    try {
+      await apiService.rejectFriendRequest(friendId);
+      
+      set((state) => ({
+        friendRequests: state.friendRequests.filter(r => r.id !== friendId),
+      }));
+    } catch (error) {
+      console.error('Reject friend request error:', error);
+    }
+  },
+
+  removeFriend: async (friendId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await apiService.removeFriend(friendId);
+      
+      set((state) => ({
+        friends: state.friends.filter(f => f.id !== friendId),
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Remove friend error:', error);
+      set({ 
+        error: 'Failed to remove friend',
+        isLoading: false 
+      });
+    }
+  },
+
+  getFriendById: (friendId: string) => {
+    return get().friends.find(f => f.id === friendId);
+  },
+
+  getFriendActivities: (limit = 10) => {
+    return get().friendActivities.slice(0, limit);
+  },
+}));

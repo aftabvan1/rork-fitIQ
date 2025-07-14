@@ -1,4 +1,4 @@
-import { useUserStore } from "@/store/user-store";
+import { useAuthStore } from "@/store/auth-store";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
@@ -8,18 +8,27 @@ import ThemedView from "@/components/ThemedView";
 
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const { setPremiumStatus } = useUserStore();
+  const { updateUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   
   const handleSubscribe = async () => {
     setLoading(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
-      // Set premium status
+    try {
+      // In a real app, this would integrate with Stripe/RevenueCat
+      // For demo, we'll simulate the subscription process
+      
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update user premium status
       const expiryDate = new Date();
       expiryDate.setMonth(expiryDate.getMonth() + 1);
-      setPremiumStatus(true, expiryDate.toISOString());
+      
+      await updateUser({
+        isPremium: true,
+        premiumUntil: expiryDate.toISOString(),
+      });
       
       setLoading(false);
       
@@ -28,7 +37,13 @@ export default function SubscriptionScreen() {
         "Thank you for subscribing to fitIQ Premium! You now have access to all premium features.",
         [{ text: "OK", onPress: () => router.back() }]
       );
-    }, 2000);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert(
+        "Subscription Failed",
+        "There was an error processing your subscription. Please try again."
+      );
+    }
   };
   
   return (
