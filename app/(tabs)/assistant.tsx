@@ -55,6 +55,7 @@ export default function AssistantScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   
   // Get today's nutrition data for smart suggestions
@@ -69,7 +70,7 @@ export default function AssistantScreen() {
       id: "smart-meals",
       title: "Smart Meal Ideas",
       prompt: `Based on my remaining macros today (${remainingCalories} calories, ${remainingProtein}g protein, ${remainingCarbs}g carbs, ${remainingFat}g fat), suggest 3 specific meals that would help me hit my goals perfectly.`,
-      icon: <ChefHat size={20} color="#fff" />,
+      icon: <ChefHat size={16} color="#fff" />,
       color: Colors[theme].primary,
       smart: true,
     },
@@ -77,7 +78,7 @@ export default function AssistantScreen() {
       id: "macro-optimization",
       title: "Optimize My Day",
       prompt: `I've consumed ${todayNutrition.calories} calories, ${todayNutrition.protein}g protein, ${todayNutrition.carbs}g carbs, and ${todayNutrition.fat}g fat today. My goals are ${user?.goals?.calories || 2000} calories, ${user?.goals?.protein || 150}g protein, ${user?.goals?.carbs || 200}g carbs, and ${user?.goals?.fat || 65}g fat. How can I optimize the rest of my day?`,
-      icon: <Target size={20} color="#fff" />,
+      icon: <Target size={16} color="#fff" />,
       color: Colors[theme].secondary,
       smart: true,
     },
@@ -85,30 +86,15 @@ export default function AssistantScreen() {
       id: "grocery-list",
       title: "Smart Grocery List",
       prompt: "Create a grocery list for healthy meals that align with my nutrition goals for the week.",
-      icon: <ShoppingCart size={20} color="#fff" />,
+      icon: <ShoppingCart size={16} color="#fff" />,
       color: Colors[theme].success,
     },
     {
       id: "meal-prep",
       title: "Meal Prep Ideas",
       prompt: `Give me 3 meal prep ideas that fit my daily goals of ${user?.goals?.calories || 2000} calories, ${user?.goals?.protein || 150}g protein, ${user?.goals?.carbs || 200}g carbs, and ${user?.goals?.fat || 65}g fat.`,
-      icon: <Utensils size={20} color="#fff" />,
+      icon: <Utensils size={16} color="#fff" />,
       color: Colors[theme].info,
-    },
-    {
-      id: "nutrition-tips",
-      title: "Nutrition Tips",
-      prompt: "What are some evidence-based nutrition tips for better energy and health?",
-      icon: <Lightbulb size={20} color="#fff" />,
-      color: Colors[theme].warning,
-    },
-    {
-      id: "food-analysis",
-      title: "Analyze My Progress",
-      prompt: `Analyze my nutrition progress today. I've had ${todayNutrition.calories} calories, ${todayNutrition.protein}g protein, ${todayNutrition.carbs}g carbs, and ${todayNutrition.fat}g fat. What's going well and what can I improve?`,
-      icon: <Brain size={20} color="#fff" />,
-      color: Colors[theme].error,
-      smart: true,
     },
   ];
   
@@ -236,6 +222,9 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
   const handleSend = async (text?: string) => {
     const messageText = text || inputText.trim();
     if (!messageText) return;
+    
+    // Hide quick actions after first user message
+    setShowQuickActions(false);
     
     // Check if user is premium
     if (!user?.isPremium && messages.filter(m => m.sender === "user").length >= 3) {
@@ -416,12 +405,12 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
       <View style={styles.quickActionIcon}>
         {item.icon}
       </View>
-      <ThemedText size="sm" weight="semibold" style={styles.quickActionText}>
+      <ThemedText size="xs" weight="semibold" style={styles.quickActionText}>
         {item.title}
       </ThemedText>
       {item.smart && (
         <View style={styles.smartBadge}>
-          <Sparkles size={12} color="#fff" />
+          <Sparkles size={10} color="#fff" />
         </View>
       )}
     </Pressable>
@@ -429,100 +418,102 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
   
   return (
     <ThemedView style={styles.container}>
-      {messages.length <= 1 && (
-        <View style={styles.quickActionsContainer}>
-          <View style={styles.progressSummary}>
-            <ThemedText size="lg" weight="semibold" style={styles.progressTitle}>
-              Today's Progress
-            </ThemedText>
-            <View style={styles.progressRow}>
-              <View style={styles.progressItem}>
-                <ThemedText size="sm" color="subtext">Remaining</ThemedText>
-                <ThemedText weight="semibold" style={{ color: Colors[theme].primary }}>
-                  {remainingCalories} cal
-                </ThemedText>
-              </View>
-              <View style={styles.progressItem}>
-                <ThemedText size="sm" color="subtext">Protein</ThemedText>
-                <ThemedText weight="semibold" style={{ color: Colors[theme].protein }}>
-                  {remainingProtein}g
-                </ThemedText>
-              </View>
-              <View style={styles.progressItem}>
-                <ThemedText size="sm" color="subtext">Carbs</ThemedText>
-                <ThemedText weight="semibold" style={{ color: Colors[theme].carbs }}>
-                  {remainingCarbs}g
-                </ThemedText>
-              </View>
-              <View style={styles.progressItem}>
-                <ThemedText size="sm" color="subtext">Fat</ThemedText>
-                <ThemedText weight="semibold" style={{ color: Colors[theme].fat }}>
-                  {remainingFat}g
-                </ThemedText>
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        {showQuickActions && messages.length <= 1 && (
+          <View style={styles.quickActionsContainer}>
+            <View style={styles.progressSummary}>
+              <ThemedText size="lg" weight="semibold" style={styles.progressTitle}>
+                Today's Progress
+              </ThemedText>
+              <View style={styles.progressRow}>
+                <View style={styles.progressItem}>
+                  <ThemedText size="sm" color="subtext">Remaining</ThemedText>
+                  <ThemedText weight="semibold" style={{ color: Colors[theme].primary }}>
+                    {remainingCalories} cal
+                  </ThemedText>
+                </View>
+                <View style={styles.progressItem}>
+                  <ThemedText size="sm" color="subtext">Protein</ThemedText>
+                  <ThemedText weight="semibold" style={{ color: Colors[theme].protein }}>
+                    {remainingProtein}g
+                  </ThemedText>
+                </View>
+                <View style={styles.progressItem}>
+                  <ThemedText size="sm" color="subtext">Carbs</ThemedText>
+                  <ThemedText weight="semibold" style={{ color: Colors[theme].carbs }}>
+                    {remainingCarbs}g
+                  </ThemedText>
+                </View>
+                <View style={styles.progressItem}>
+                  <ThemedText size="sm" color="subtext">Fat</ThemedText>
+                  <ThemedText weight="semibold" style={{ color: Colors[theme].fat }}>
+                    {remainingFat}g
+                  </ThemedText>
+                </View>
               </View>
             </View>
-          </View>
-          
-          <ThemedText size="lg" weight="semibold" style={styles.quickActionsTitle}>
-            Smart Actions
-          </ThemedText>
-          <FlatList
-            data={quickActions}
-            renderItem={renderQuickAction}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            scrollEnabled={false}
-            contentContainerStyle={styles.quickActionsList}
-          />
-        </View>
-      )}
-      
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messagesList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        showsVerticalScrollIndicator={false}
-      />
-      
-      {loading && (
-        <ThemedView backgroundColor="card" shadow="lg" rounded="xxl" style={styles.loadingContainer}>
-          <View style={[styles.aiIcon, { backgroundColor: Colors[theme].primary }]}>
-            <Sparkles size={16} color="#fff" />
-          </View>
-          <ActivityIndicator color={Colors[theme].primary} style={styles.loadingSpinner} />
-          <ThemedText size="sm" color="subtext" style={styles.loadingText}>
-            AI is analyzing your nutrition data...
-          </ThemedText>
-        </ThemedView>
-      )}
-      
-      {!user?.isPremium && messages.filter(m => m.sender === "user").length >= 3 ? (
-        <ThemedView backgroundColor="card" shadow="lg" rounded="xxl" style={styles.premiumPrompt}>
-          <View style={styles.premiumHeader}>
-            <Sparkles size={24} color={Colors[theme].primary} />
-            <ThemedText size="lg" weight="bold" style={styles.premiumTitle}>
-              Upgrade to Premium
+            
+            <ThemedText size="lg" weight="semibold" style={styles.quickActionsTitle}>
+              Smart Actions
             </ThemedText>
+            <FlatList
+              data={quickActions}
+              renderItem={renderQuickAction}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              scrollEnabled={false}
+              contentContainerStyle={styles.quickActionsList}
+            />
           </View>
-          <ThemedText color="subtext" style={styles.premiumText}>
-            Get unlimited AI conversations and personalized nutrition insights
-          </ThemedText>
-          <Button
-            title="Upgrade Now"
-            onPress={() => router.push("/subscription")}
-            style={styles.upgradeButton}
-            leftIcon={<Sparkles size={18} color={Colors[theme].background} />}
-          />
-        </ThemedView>
-      ) : (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={100}
-        >
+        )}
+        
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          style={styles.messagesList}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
+        />
+        
+        {loading && (
+          <ThemedView backgroundColor="card" shadow="lg" rounded="xxl" style={styles.loadingContainer}>
+            <View style={[styles.aiIcon, { backgroundColor: Colors[theme].primary }]}>
+              <Sparkles size={16} color="#fff" />
+            </View>
+            <ActivityIndicator color={Colors[theme].primary} style={styles.loadingSpinner} />
+            <ThemedText size="sm" color="subtext" style={styles.loadingText}>
+              AI is analyzing your nutrition data...
+            </ThemedText>
+          </ThemedView>
+        )}
+        
+        {!user?.isPremium && messages.filter(m => m.sender === "user").length >= 3 ? (
+          <ThemedView backgroundColor="card" shadow="lg" rounded="xxl" style={styles.premiumPrompt}>
+            <View style={styles.premiumHeader}>
+              <Sparkles size={24} color={Colors[theme].primary} />
+              <ThemedText size="lg" weight="bold" style={styles.premiumTitle}>
+                Upgrade to Premium
+              </ThemedText>
+            </View>
+            <ThemedText color="subtext" style={styles.premiumText}>
+              Get unlimited AI conversations and personalized nutrition insights
+            </ThemedText>
+            <Button
+              title="Upgrade Now"
+              onPress={() => router.push("/subscription")}
+              style={styles.upgradeButton}
+              leftIcon={<Sparkles size={18} color={Colors[theme].background} />}
+            />
+          </ThemedView>
+        ) : (
           <ThemedView backgroundColor="card" shadow="lg" rounded="xxl" style={styles.inputContainer}>
             <TextInput
               style={[
@@ -555,14 +546,17 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
               <Send size={20} color="#fff" />
             </Pressable>
           </ThemedView>
-        </KeyboardAvoidingView>
-      )}
+        )}
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardView: {
     flex: 1,
   },
   quickActionsContainer: {
@@ -586,15 +580,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   quickActionsList: {
-    gap: 12,
+    gap: 8,
   },
   quickActionCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 20,
+    padding: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    marginHorizontal: 6,
-    minHeight: 90,
+    marginHorizontal: 4,
+    minHeight: 70,
     justifyContent: 'center',
     position: 'relative',
   },
@@ -603,26 +597,30 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   quickActionIcon: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   quickActionText: {
     color: '#fff',
     textAlign: 'center',
+    lineHeight: 14,
   },
   smartBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   messagesList: {
+    flex: 1,
+  },
+  messagesContent: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 16,
   },
   messageContainer: {
     marginBottom: 16,
@@ -700,11 +698,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 16,
     paddingTop: 12,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     alignItems: 'flex-end',
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
   input: {
     flex: 1,
@@ -730,7 +726,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     marginHorizontal: 16,
-    marginBottom: 120,
+    marginBottom: 16,
     alignSelf: "flex-start",
   },
   loadingSpinner: {
@@ -743,10 +739,6 @@ const styles = StyleSheet.create({
     padding: 24,
     marginHorizontal: 16,
     marginBottom: 16,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   premiumHeader: {
     flexDirection: 'row',

@@ -1,7 +1,7 @@
 import { useThemeStore } from "@/store/theme-store";
 import Colors from "@/constants/colors";
 import { Tabs } from "expo-router";
-import { BarChart2, Camera, Home, MessageSquare, User } from "lucide-react-native";
+import { BarChart2, Camera, Home, MessageSquare, User, Dumbbell } from "lucide-react-native";
 import React from "react";
 
 export default function TabLayout() {
@@ -42,6 +42,13 @@ export default function TabLayout() {
         options={{
           title: "Scan",
           tabBarIcon: ({ color }) => <Camera color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="workout"
+        options={{
+          title: "Workout",
+          tabBarIcon: ({ color }) => <Dumbbell color={color} size={24} />,
         }}
       />
       <Tabs.Screen
