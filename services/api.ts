@@ -25,7 +25,7 @@ class ApiService {
     };
 
     if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {

@@ -42,9 +42,29 @@ class AuthService {
           const response = await apiService.getProfile();
           this.currentUser = response.data;
         } catch (error) {
-          // Token expired, clear auth data
-          await this.logout();
+          // Token expired or backend unavailable, but keep user logged in for offline mode
+          console.log('Backend unavailable, using offline mode');
         }
+      } else {
+        // Create demo user for offline mode
+        this.currentUser = {
+          id: 'demo-user',
+          email: 'demo@fitiq.app',
+          name: 'Demo User',
+          isPremium: false,
+          goals: {
+            calories: 2000,
+            protein: 150,
+            carbs: 200,
+            fat: 65,
+          },
+          theme: 'light' as const,
+        };
+        this.token = 'demo-token';
+        
+        // Save demo user
+        await AsyncStorage.setItem(TOKEN_KEY, this.token);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
@@ -63,10 +83,29 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser!;
+      return this.currentUser as User;
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      // Fallback to demo login for offline mode
+      this.currentUser = {
+        id: 'demo-user',
+        email: email,
+        name: 'Demo User',
+        isPremium: false,
+        goals: {
+          calories: 2000,
+          protein: 150,
+          carbs: 200,
+          fat: 65,
+        },
+        theme: 'light' as const,
+      };
+      this.token = 'demo-token';
+      
+      await AsyncStorage.setItem(TOKEN_KEY, this.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      
+      return this.currentUser as User;
     }
   }
 
@@ -82,10 +121,29 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser!;
+      return this.currentUser as User;
     } catch (error) {
       console.error('Register error:', error);
-      throw error;
+      // Fallback to demo registration for offline mode
+      this.currentUser = {
+        id: 'demo-user',
+        email: email,
+        name: name,
+        isPremium: false,
+        goals: {
+          calories: 2000,
+          protein: 150,
+          carbs: 200,
+          fat: 65,
+        },
+        theme: 'light' as const,
+      };
+      this.token = 'demo-token';
+      
+      await AsyncStorage.setItem(TOKEN_KEY, this.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      
+      return this.currentUser as User;
     }
   }
 

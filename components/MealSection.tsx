@@ -71,7 +71,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
           {entries.length > 0 ? (
             entries.map((entry, index) => (
               <FoodCard
-                key={`${mealType}-${entry.id}-${index}`}
+                key={`${mealType}-${entry.id || entry.food.id}-${index}-${entry.createdAt || Date.now()}`}
                 food={entry.food}
                 onPress={() => onEntryPress(entry)}
                 compact
