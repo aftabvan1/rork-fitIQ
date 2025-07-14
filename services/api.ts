@@ -10,9 +10,23 @@ const checkBackendAvailability = async (): Promise<boolean> => {
   }
   
   backendCheckPromise = (async () => {
-    // Always return false for demo mode - backend is not available
-    backendAvailable = false;
-    return false;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      backendAvailable = response.ok;
+      return backendAvailable;
+    } catch (error) {
+      console.log('Backend health check failed:', error);
+      backendAvailable = false;
+      return false;
+    }
   })();
   
   return backendCheckPromise;
@@ -40,19 +54,19 @@ class ApiService {
     if (!skipBackendCheck && endpoint !== '/health') {
       const isAvailable = await checkBackendAvailability();
       if (!isAvailable) {
-        throw new Error('Backend not available - using offline mode');
+        throw new Error('Backend not available');
       }
     }
     
     const url = `${API_BASE_URL}${endpoint}`;
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (this.token && this.token !== 'demo-token') {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
@@ -74,12 +88,16 @@ class ApiService {
 
       return data;
     } catch (error) {
-      // Don't log network errors in demo mode
-      if (this.token !== 'demo-token') {
-        console.log('API request failed, falling back to offline mode');
-      }
+      console.error('API request failed:', error);
       throw error;
     }
+  }
+
+  // Health check
+  async healthCheck() {
+    return this.request<{ status: string }>('/health', {
+      method: 'GET',
+    }, true);
   }
 
   // Auth endpoints

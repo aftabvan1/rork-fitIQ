@@ -18,6 +18,7 @@ interface NutritionState {
   scanBarcode: (barcode: string) => Promise<Food | null>;
   analyzeFoodPhoto: (imageUri: string) => Promise<Food[]>;
   getDailyNutrition: (date: string) => DailyNutrition;
+  clearError: () => void;
 }
 
 const createEmptyDailyNutrition = (date: string): DailyNutrition => ({
@@ -54,26 +55,13 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      // Silently handle offline mode
-      const demoData = createEmptyDailyNutrition(date);
-      if (date === new Date().toISOString().split('T')[0]) {
-        // Add some demo entries for today
-        const breakfastEntry = createMockMealEntry('1', 'breakfast', date, 1);
-        const lunchEntry = createMockMealEntry('2', 'lunch', date, 1);
-        demoData.meals.breakfast = [breakfastEntry];
-        demoData.meals.lunch = [lunchEntry];
-        demoData.calories = breakfastEntry.food.calories + lunchEntry.food.calories;
-        demoData.protein = breakfastEntry.food.protein + lunchEntry.food.protein;
-        demoData.carbs = breakfastEntry.food.carbs + lunchEntry.food.carbs;
-        demoData.fat = breakfastEntry.food.fat + lunchEntry.food.fat;
-      }
-      
+      console.error('Fetch daily nutrition error:', error);
       set({ 
-        error: null, // Don't show error in offline mode
+        error: error instanceof Error ? error.message : 'Failed to fetch nutrition data',
         isLoading: false,
         dailyLogs: {
           ...get().dailyLogs,
-          [date]: demoData,
+          [date]: createEmptyDailyNutrition(date),
         },
       });
     }
@@ -114,41 +102,12 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         };
       });
     } catch (error) {
-      // Silently fallback to offline mode - create entry locally
-      const newEntry: MealEntry = {
-        id: `offline-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`,
-        ...entry,
-        createdAt: new Date().toISOString(),
-      };
-      
-      const { date, mealType } = entry;
-      set((state) => {
-        const currentLog = state.dailyLogs[date] || createEmptyDailyNutrition(date);
-        const calories = entry.food.calories * entry.quantity;
-        const protein = entry.food.protein * entry.quantity;
-        const carbs = entry.food.carbs * entry.quantity;
-        const fat = entry.food.fat * entry.quantity;
-        
-        return {
-          dailyLogs: {
-            ...state.dailyLogs,
-            [date]: {
-              ...currentLog,
-              calories: currentLog.calories + calories,
-              protein: currentLog.protein + protein,
-              carbs: currentLog.carbs + carbs,
-              fat: currentLog.fat + fat,
-              meals: {
-                ...currentLog.meals,
-                [mealType]: [...currentLog.meals[mealType], newEntry],
-              },
-            },
-          },
-          recentFoods: [entry.food, ...state.recentFoods.filter(f => f.id !== entry.food.id)].slice(0, 20),
-          isLoading: false,
-          error: null,
-        };
+      console.error('Add meal entry error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to add meal entry',
+        isLoading: false 
       });
+      throw error;
     }
   },
 
@@ -202,7 +161,10 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       });
     } catch (error) {
       console.error('Update meal entry error:', error);
-      set({ error: 'Failed to update meal entry', isLoading: false });
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to update meal entry',
+        isLoading: false 
+      });
       throw error;
     }
   },
@@ -258,7 +220,10 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       });
     } catch (error) {
       console.error('Remove meal entry error:', error);
-      set({ error: 'Failed to remove meal entry', isLoading: false });
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to remove meal entry',
+        isLoading: false 
+      });
       throw error;
     }
   },
@@ -268,7 +233,8 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.searchFood(query);
       return response.data || [];
     } catch (error) {
-      // Silently fallback to local search
+      console.error('Search food error:', error);
+      // Fallback to local search only if backend is unavailable
       const lowerQuery = query.toLowerCase();
       return fallbackFoods.filter(food => 
         food.name.toLowerCase().includes(lowerQuery) ||
@@ -282,8 +248,9 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.getFoodByBarcode(barcode);
       return response.data || null;
     } catch (error) {
-      // Silently fallback to mock data
-      return fallbackFoods[0] || null; // Return first food as demo
+      console.error('Scan barcode error:', error);
+      // Fallback to mock data only if backend is unavailable
+      return fallbackFoods[0] || null;
     }
   },
 
@@ -292,12 +259,15 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.analyzeFoodPhoto(imageUri);
       return response.data || [];
     } catch (error) {
-      // Silently fallback to demo results
-      return fallbackFoods.slice(0, 2); // Return first 2 foods as demo
+      console.error('Analyze food photo error:', error);
+      // Fallback to demo results only if backend is unavailable
+      return fallbackFoods.slice(0, 2);
     }
   },
 
   getDailyNutrition: (date: string) => {
     return get().dailyLogs[date] || createEmptyDailyNutrition(date);
   },
+
+  clearError: () => set({ error: null }),
 }));

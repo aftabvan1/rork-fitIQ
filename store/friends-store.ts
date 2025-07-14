@@ -47,6 +47,7 @@ interface FriendsState {
   removeFriend: (friendId: string) => Promise<void>;
   getFriendById: (friendId: string) => Friend | undefined;
   getFriendActivities: (limit?: number) => FriendActivity[];
+  clearError: () => void;
 }
 
 export const useFriendsStore = create<FriendsState>((set, get) => ({
@@ -65,91 +66,39 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
         isLoading: false 
       });
     } catch (error) {
-      // Silently handle offline mode with demo friends
+      console.error('Fetch friends error:', error);
       set({ 
-        friends: [
-          {
-            id: 'demo-friend-1',
-            name: 'Alex Johnson',
-            email: 'alex@example.com',
-            status: 'accepted' as const,
-            addedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            streak: 5,
-            totalWorkouts: 23,
-            currentGoals: {
-              calories: 2200,
-              protein: 160,
-              carbs: 220,
-              fat: 70,
-            },
-          },
-          {
-            id: 'demo-friend-2',
-            name: 'Sarah Wilson',
-            email: 'sarah@example.com',
-            status: 'accepted' as const,
-            addedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            lastActive: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            streak: 12,
-            totalWorkouts: 45,
-            currentGoals: {
-              calories: 1800,
-              protein: 120,
-              carbs: 180,
-              fat: 60,
-            },
-          },
-        ],
-        error: null,
+        error: error instanceof Error ? error.message : 'Failed to fetch friends',
+        friends: [],
         isLoading: false 
       });
     }
   },
 
   fetchFriendRequests: async () => {
+    set({ error: null });
     try {
       const response = await apiService.getFriendRequests();
       set({ friendRequests: response.data || [] });
     } catch (error) {
-      // Silently handle offline mode
-      set({ friendRequests: [] });
+      console.error('Fetch friend requests error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to fetch friend requests',
+        friendRequests: [] 
+      });
     }
   },
 
   fetchFriendActivities: async () => {
+    set({ error: null });
     try {
       const response = await apiService.getFriendActivities();
       set({ friendActivities: response.data || [] });
     } catch (error) {
-      // Silently handle offline mode with demo activities
+      console.error('Fetch friend activities error:', error);
       set({ 
-        friendActivities: [
-          {
-            id: 'activity-1',
-            friendId: 'demo-friend-1',
-            friendName: 'Alex Johnson',
-            type: 'workout' as const,
-            description: 'Completed a 45-minute strength training session',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 'activity-2',
-            friendId: 'demo-friend-2',
-            friendName: 'Sarah Wilson',
-            type: 'goal_achieved' as const,
-            description: 'Reached daily protein goal!',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 'activity-3',
-            friendId: 'demo-friend-1',
-            friendName: 'Alex Johnson',
-            type: 'meal' as const,
-            description: 'Logged a healthy breakfast',
-            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          },
-        ]
+        error: error instanceof Error ? error.message : 'Failed to fetch friend activities',
+        friendActivities: []
       });
     }
   },
@@ -161,12 +110,12 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
       set({ isLoading: false });
       return true;
     } catch (error) {
-      // Silently handle offline mode
+      console.error('Add friend error:', error);
       set({ 
-        error: null,
+        error: error instanceof Error ? error.message : 'Failed to send friend request',
         isLoading: false 
       });
-      return true; // Pretend it worked in offline mode
+      return false;
     }
   },
 
@@ -192,15 +141,16 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
         };
       });
     } catch (error) {
-      // Silently handle offline mode
+      console.error('Accept friend request error:', error);
       set({ 
-        error: null,
+        error: error instanceof Error ? error.message : 'Failed to accept friend request',
         isLoading: false 
       });
     }
   },
 
   rejectFriendRequest: async (friendId: string) => {
+    set({ error: null });
     try {
       await apiService.rejectFriendRequest(friendId);
       
@@ -208,7 +158,10 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
         friendRequests: state.friendRequests.filter(r => r.id !== friendId),
       }));
     } catch (error) {
-      // Silently handle offline mode
+      console.error('Reject friend request error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to reject friend request'
+      });
     }
   },
 
@@ -222,12 +175,11 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      // Silently handle offline mode
-      set((state) => ({
-        friends: state.friends.filter(f => f.id !== friendId),
-        isLoading: false,
-        error: null,
-      }));
+      console.error('Remove friend error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to remove friend',
+        isLoading: false 
+      });
     }
   },
 
@@ -238,4 +190,6 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
   getFriendActivities: (limit = 10) => {
     return get().friendActivities.slice(0, limit);
   },
+
+  clearError: () => set({ error: null }),
 }));

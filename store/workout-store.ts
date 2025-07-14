@@ -49,14 +49,60 @@ interface WorkoutState {
   saveWorkout: (workout: Workout) => Promise<void>;
   deleteWorkout: (workoutId: string) => Promise<void>;
   getWeeklyStats: () => { workouts: number; totalDuration: number; totalSets: number };
+  clearError: () => void;
 }
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 
+const defaultExerciseTemplates: Exercise[] = [
+  {
+    id: '1',
+    name: 'Bench Press',
+    category: 'Chest',
+    muscleGroups: ['Chest', 'Triceps', 'Shoulders'],
+    sets: [],
+  },
+  {
+    id: '2',
+    name: 'Squat',
+    category: 'Legs',
+    muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings'],
+    sets: [],
+  },
+  {
+    id: '3',
+    name: 'Deadlift',
+    category: 'Back',
+    muscleGroups: ['Back', 'Hamstrings', 'Glutes'],
+    sets: [],
+  },
+  {
+    id: '4',
+    name: 'Pull-ups',
+    category: 'Back',
+    muscleGroups: ['Back', 'Biceps'],
+    sets: [],
+  },
+  {
+    id: '5',
+    name: 'Overhead Press',
+    category: 'Shoulders',
+    muscleGroups: ['Shoulders', 'Triceps'],
+    sets: [],
+  },
+  {
+    id: '6',
+    name: 'Barbell Row',
+    category: 'Back',
+    muscleGroups: ['Back', 'Biceps'],
+    sets: [],
+  },
+];
+
 export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   currentWorkout: null,
   workoutHistory: [],
-  exerciseTemplates: [],
+  exerciseTemplates: defaultExerciseTemplates,
   isLoading: false,
   error: null,
 
@@ -69,67 +115,24 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         isLoading: false 
       });
     } catch (error) {
-      // Silently handle offline mode
+      console.error('Fetch workouts error:', error);
       set({ 
-        error: null,
+        error: error instanceof Error ? error.message : 'Failed to fetch workouts',
         isLoading: false,
-        workoutHistory: [] // Empty history for offline mode
+        workoutHistory: []
       });
     }
   },
 
   fetchExerciseTemplates: async () => {
+    set({ error: null });
     try {
       const response = await apiService.getExerciseTemplates();
-      set({ exerciseTemplates: response.data || [] });
+      set({ exerciseTemplates: response.data || defaultExerciseTemplates });
     } catch (error) {
-      // Silently fallback to default templates
-      set({
-        exerciseTemplates: [
-          {
-            id: '1',
-            name: 'Bench Press',
-            category: 'Chest',
-            muscleGroups: ['Chest', 'Triceps', 'Shoulders'],
-            sets: [],
-          },
-          {
-            id: '2',
-            name: 'Squat',
-            category: 'Legs',
-            muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings'],
-            sets: [],
-          },
-          {
-            id: '3',
-            name: 'Deadlift',
-            category: 'Back',
-            muscleGroups: ['Back', 'Hamstrings', 'Glutes'],
-            sets: [],
-          },
-          {
-            id: '4',
-            name: 'Pull-ups',
-            category: 'Back',
-            muscleGroups: ['Back', 'Biceps'],
-            sets: [],
-          },
-          {
-            id: '5',
-            name: 'Overhead Press',
-            category: 'Shoulders',
-            muscleGroups: ['Shoulders', 'Triceps'],
-            sets: [],
-          },
-          {
-            id: '6',
-            name: 'Barbell Row',
-            category: 'Back',
-            muscleGroups: ['Back', 'Biceps'],
-            sets: [],
-          },
-        ],
-      });
+      console.error('Fetch exercise templates error:', error);
+      // Keep default templates on error
+      set({ exerciseTemplates: defaultExerciseTemplates });
     }
   },
 
@@ -168,13 +171,12 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      // Silently save locally in offline mode
-      set((state) => ({
-        currentWorkout: null,
-        workoutHistory: [completedWorkout, ...state.workoutHistory],
-        isLoading: false,
-        error: null,
-      }));
+      console.error('End workout error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to save workout',
+        isLoading: false 
+      });
+      throw error;
     }
   },
 
@@ -282,14 +284,12 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      // Silently save locally in offline mode
-      set((state) => ({
-        workoutHistory: state.workoutHistory.some(w => w.id === workout.id) 
-          ? state.workoutHistory.map(w => w.id === workout.id ? workout : w)
-          : [workout, ...state.workoutHistory],
-        isLoading: false,
-        error: null,
-      }));
+      console.error('Save workout error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to save workout',
+        isLoading: false 
+      });
+      throw error;
     }
   },
 
@@ -303,12 +303,12 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      // Silently delete locally in offline mode
-      set((state) => ({
-        workoutHistory: state.workoutHistory.filter(w => w.id !== workoutId),
-        isLoading: false,
-        error: null,
-      }));
+      console.error('Delete workout error:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to delete workout',
+        isLoading: false 
+      });
+      throw error;
     }
   },
 
@@ -331,4 +331,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       ),
     };
   },
+
+  clearError: () => set({ error: null }),
 }));
