@@ -37,14 +37,16 @@ class AuthService {
         this.currentUser = JSON.parse(userData);
         apiService.setToken(token);
         
-        // Verify token is still valid
+        // Verify token is still valid by checking backend
         try {
           const response = await apiService.getProfile();
-          this.currentUser = response.data;
-          await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+          if (response.data) {
+            this.currentUser = response.data;
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+          }
         } catch (error) {
           console.error('Token verification failed:', error);
-          // Token expired, clear auth data
+          // Token expired or backend unavailable, clear auth data
           await this.logout();
         }
       }
@@ -55,31 +57,49 @@ class AuthService {
   }
 
   async login(email: string, password: string): Promise<User> {
-    const response = await apiService.login(email, password);
-    
-    this.token = response.data.token;
-    this.currentUser = response.data.user;
-    
-    await AsyncStorage.setItem(TOKEN_KEY, this.token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
-    
-    apiService.setToken(this.token);
-    
-    return this.currentUser;
+    try {
+      const response = await apiService.login(email, password);
+      
+      if (!response.data.token || !response.data.user) {
+        throw new Error('Invalid response from server');
+      }
+      
+      this.token = response.data.token;
+      this.currentUser = response.data.user;
+      
+      await AsyncStorage.setItem(TOKEN_KEY, this.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      
+      apiService.setToken(this.token);
+      
+      return this.currentUser;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   }
 
   async register(email: string, password: string, name: string): Promise<User> {
-    const response = await apiService.register(email, password, name);
-    
-    this.token = response.data.token;
-    this.currentUser = response.data.user;
-    
-    await AsyncStorage.setItem(TOKEN_KEY, this.token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
-    
-    apiService.setToken(this.token);
-    
-    return this.currentUser;
+    try {
+      const response = await apiService.register(email, password, name);
+      
+      if (!response.data.token || !response.data.user) {
+        throw new Error('Invalid response from server');
+      }
+      
+      this.token = response.data.token;
+      this.currentUser = response.data.user;
+      
+      await AsyncStorage.setItem(TOKEN_KEY, this.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      
+      apiService.setToken(this.token);
+      
+      return this.currentUser;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   }
 
   async logout() {
@@ -112,10 +132,26 @@ class AuthService {
       throw new Error('No user logged in');
     }
 
-    const response = await apiService.updateProfile(userData);
-    this.currentUser = { ...this.currentUser, ...response.data };
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
-    return this.currentUser;
+    try {
+      const response = await apiService.updateProfile(userData);
+      this.currentUser = { ...this.currentUser, ...response.data };
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      return this.currentUser;
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
+    }
+  }
+
+  // Check if backend is available
+  async checkBackendConnection(): Promise<boolean> {
+    try {
+      const status = await apiService.getBackendStatus();
+      return status.available;
+    } catch (error) {
+      console.error('Backend connection check failed:', error);
+      return false;
+    }
   }
 }
 

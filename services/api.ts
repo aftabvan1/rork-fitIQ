@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.fitiq.app';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 // Check if backend is available
 let backendAvailable = false;
@@ -21,6 +21,7 @@ const checkBackendAvailability = async (): Promise<boolean> => {
       
       clearTimeout(timeoutId);
       backendAvailable = response.ok;
+      console.log('Backend availability check:', backendAvailable);
       return backendAvailable;
     } catch (error) {
       console.log('Backend health check failed:', error);
@@ -54,7 +55,7 @@ class ApiService {
     if (!skipBackendCheck && endpoint !== '/health') {
       const isAvailable = await checkBackendAvailability();
       if (!isAvailable) {
-        throw new Error('Backend not available');
+        throw new Error('Backend service is not available. Please check your connection or contact support.');
       }
     }
     
@@ -71,7 +72,9 @@ class ApiService {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      console.log(`Making API request to: ${url}`);
       
       const response = await fetch(url, {
         ...options,
@@ -80,22 +83,37 @@ class ApiService {
       });
       
       clearTimeout(timeoutId);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'API request failed');
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', parseError);
+        throw new Error('Invalid response from server');
       }
 
+      if (!response.ok) {
+        console.error(`API Error (${response.status}):`, data);
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log(`API Success for ${endpoint}:`, data);
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+      console.error(`API request failed for ${endpoint}:`, error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout - please try again');
+        }
+        throw error;
+      }
+      throw new Error('Network request failed');
     }
   }
 
   // Health check
   async healthCheck() {
-    return this.request<{ status: string }>('/health', {
+    return this.request<{ status: string; timestamp: string }>('/health', {
       method: 'GET',
     }, true);
   }
@@ -288,7 +306,7 @@ class ApiService {
 
   // AI Assistant endpoints
   async chatWithAssistant(messages: any[]) {
-    // Use external AI service instead of backend
+    // Use external AI service instead of backend for now
     try {
       const response = await fetch('https://toolkit.rork.com/text/llm/', {
         method: 'POST',
@@ -315,6 +333,23 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(nutritionData),
     });
+  }
+
+  // Backend status check
+  async getBackendStatus() {
+    try {
+      const health = await this.healthCheck();
+      return {
+        available: true,
+        status: health.data.status,
+        timestamp: health.data.timestamp,
+      };
+    } catch (error) {
+      return {
+        available: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }
 
