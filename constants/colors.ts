@@ -1,0 +1,42 @@
+export const Colors = {
+  light: {
+    primary: '#7C3AED',
+    secondary: '#F59E0B',
+    background: '#F8FAFC',
+    card: '#FFFFFF',
+    text: '#1E293B',
+    subtext: '#64748B',
+    border: '#E2E8F0',
+    error: '#EF4444',
+    success: '#10B981',
+    warning: '#F59E0B',
+    info: '#3B82F6',
+    protein: '#F472B6',
+    carbs: '#60A5FA',
+    fat: '#FBBF24',
+    tint: '#7C3AED',
+    tabIconDefault: '#94A3B8',
+    tabIconSelected: '#7C3AED',
+  },
+  dark: {
+    primary: '#A78BFA',
+    secondary: '#FBBF24',
+    background: '#0F172A',
+    card: '#1E293B',
+    text: '#F1F5F9',
+    subtext: '#94A3B8',
+    border: '#334155',
+    error: '#F87171',
+    success: '#34D399',
+    warning: '#FBBF24',
+    info: '#60A5FA',
+    protein: '#F9A8D4',
+    carbs: '#93C5FD',
+    fat: '#FDE047',
+    tint: '#A78BFA',
+    tabIconDefault: '#64748B',
+    tabIconSelected: '#A78BFA',
+  }
+};
+
+export default Colors;
