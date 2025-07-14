@@ -63,7 +63,7 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser;
+      return this.currentUser!;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -82,7 +82,7 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser;
+      return this.currentUser!;
     } catch (error) {
       console.error('Register error:', error);
       throw error;
