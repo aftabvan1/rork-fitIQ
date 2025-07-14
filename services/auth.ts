@@ -83,7 +83,7 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser as User;
+      return this.currentUser!;
     } catch (error) {
       console.error('Login error:', error);
       // Fallback to demo login for offline mode
@@ -105,7 +105,7 @@ class AuthService {
       await AsyncStorage.setItem(TOKEN_KEY, this.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
       
-      return this.currentUser as User;
+      return this.currentUser!;
     }
   }
 
@@ -121,7 +121,7 @@ class AuthService {
       
       apiService.setToken(this.token);
       
-      return this.currentUser as User;
+      return this.currentUser!;
     } catch (error) {
       console.error('Register error:', error);
       // Fallback to demo registration for offline mode
@@ -143,7 +143,7 @@ class AuthService {
       await AsyncStorage.setItem(TOKEN_KEY, this.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
       
-      return this.currentUser as User;
+      return this.currentUser!;
     }
   }
 

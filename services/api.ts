@@ -19,13 +19,13 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    const headers: Record<string, string> = {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
+      ...(options.headers || {}),
     };
 
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
