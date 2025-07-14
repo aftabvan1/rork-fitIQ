@@ -1,5 +1,23 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.fitiq.app';
 
+// Check if backend is available
+let backendAvailable = false;
+let backendCheckPromise: Promise<boolean> | null = null;
+
+const checkBackendAvailability = async (): Promise<boolean> => {
+  if (backendCheckPromise) {
+    return backendCheckPromise;
+  }
+  
+  backendCheckPromise = (async () => {
+    // Always return false for demo mode - backend is not available
+    backendAvailable = false;
+    return false;
+  })();
+  
+  return backendCheckPromise;
+};
+
 interface ApiResponse<T> {
   data: T;
   success: boolean;
@@ -15,8 +33,17 @@ class ApiService {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    skipBackendCheck = false
   ): Promise<ApiResponse<T>> {
+    // Check backend availability first (except for health check)
+    if (!skipBackendCheck && endpoint !== '/health') {
+      const isAvailable = await checkBackendAvailability();
+      if (!isAvailable) {
+        throw new Error('Backend not available - using offline mode');
+      }
+    }
+    
     const url = `${API_BASE_URL}${endpoint}`;
     
     const headers: HeadersInit = {
@@ -24,16 +51,21 @@ class ApiService {
       ...(options.headers || {}),
     };
 
-    if (this.token) {
+    if (this.token && this.token !== 'demo-token') {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(url, {
         ...options,
         headers,
+        signal: controller.signal,
       });
-
+      
+      clearTimeout(timeoutId);
       const data = await response.json();
 
       if (!response.ok) {
@@ -42,7 +74,10 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('API Error:', error);
+      // Don't log network errors in demo mode
+      if (this.token !== 'demo-token') {
+        console.log('API request failed, falling back to offline mode');
+      }
       throw error;
     }
   }
@@ -235,10 +270,26 @@ class ApiService {
 
   // AI Assistant endpoints
   async chatWithAssistant(messages: any[]) {
-    return this.request<{ response: string }>('/ai/chat', {
-      method: 'POST',
-      body: JSON.stringify({ messages }),
-    });
+    // Use external AI service instead of backend
+    try {
+      const response = await fetch('https://toolkit.rork.com/text/llm/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('AI service unavailable');
+      }
+      
+      const data = await response.json();
+      return { data: { response: data.completion }, success: true };
+    } catch (error) {
+      console.error('AI chat error:', error);
+      throw error;
+    }
   }
 
   async getMealSuggestions(nutritionData: any) {

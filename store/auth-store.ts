@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false 
       });
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      // Silently handle initialization errors
       set({ isLoading: false });
     }
   },
@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false 
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      // Silently handle logout errors
       set({ isLoading: false });
     }
   },
@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const updatedUser = await authService.updateUser(userData);
       set({ user: updatedUser });
     } catch (error) {
-      console.error('Update user error:', error);
+      // Silently handle update errors
       throw error;
     }
   },

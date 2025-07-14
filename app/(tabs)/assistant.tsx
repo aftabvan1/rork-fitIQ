@@ -170,7 +170,6 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
       
       return { text: aiText, suggestions };
     } catch (error) {
-      console.error('AI API error:', error);
       return { text: "I'm experiencing some technical difficulties. Please try again later." };
     }
   };
@@ -270,7 +269,6 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
         },
       ]);
     } catch (error) {
-      console.error("Assistant error:", error);
       setMessages((prev) => [
         ...prev,
         {

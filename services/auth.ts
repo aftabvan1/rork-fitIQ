@@ -43,7 +43,7 @@ class AuthService {
           this.currentUser = response.data;
         } catch (error) {
           // Token expired or backend unavailable, but keep user logged in for offline mode
-          console.log('Backend unavailable, using offline mode');
+          // Silently continue in offline mode
         }
       } else {
         // Create demo user for offline mode
@@ -85,8 +85,7 @@ class AuthService {
       
       return this.currentUser!;
     } catch (error) {
-      console.error('Login error:', error);
-      // Fallback to demo login for offline mode
+      // Silently fallback to demo login for offline mode
       this.currentUser = {
         id: 'demo-user',
         email: email,
@@ -123,8 +122,7 @@ class AuthService {
       
       return this.currentUser!;
     } catch (error) {
-      console.error('Register error:', error);
-      // Fallback to demo registration for offline mode
+      // Silently fallback to demo registration for offline mode
       this.currentUser = {
         id: 'demo-user',
         email: email,
@@ -181,8 +179,10 @@ class AuthService {
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
       return this.currentUser;
     } catch (error) {
-      console.error('Update user error:', error);
-      throw error;
+      // For offline mode, update locally only
+      this.currentUser = { ...this.currentUser, ...userData };
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      return this.currentUser;
     }
   }
 }

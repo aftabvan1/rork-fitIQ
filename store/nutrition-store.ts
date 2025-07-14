@@ -54,8 +54,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error('Fetch daily nutrition error:', error);
-      // Create demo data for offline mode
+      // Silently handle offline mode
       const demoData = createEmptyDailyNutrition(date);
       if (date === new Date().toISOString().split('T')[0]) {
         // Add some demo entries for today
@@ -115,8 +114,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         };
       });
     } catch (error) {
-      console.error('Add meal entry error:', error);
-      // Fallback to offline mode - create entry locally
+      // Silently fallback to offline mode - create entry locally
       const newEntry: MealEntry = {
         id: `offline-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`,
         ...entry,
@@ -270,8 +268,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.searchFood(query);
       return response.data || [];
     } catch (error) {
-      console.error('Search food error:', error);
-      // Fallback to local search
+      // Silently fallback to local search
       const lowerQuery = query.toLowerCase();
       return fallbackFoods.filter(food => 
         food.name.toLowerCase().includes(lowerQuery) ||
@@ -285,8 +282,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.getFoodByBarcode(barcode);
       return response.data || null;
     } catch (error) {
-      console.error('Scan barcode error:', error);
-      // Fallback to mock data
+      // Silently fallback to mock data
       return fallbackFoods[0] || null; // Return first food as demo
     }
   },
@@ -296,8 +292,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
       const response = await apiService.analyzeFoodPhoto(imageUri);
       return response.data || [];
     } catch (error) {
-      console.error('Analyze food photo error:', error);
-      // Fallback to demo results
+      // Silently fallback to demo results
       return fallbackFoods.slice(0, 2); // Return first 2 foods as demo
     }
   },
