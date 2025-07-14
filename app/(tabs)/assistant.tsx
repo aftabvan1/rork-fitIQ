@@ -2,7 +2,7 @@ import { useUserStore } from "@/store/user-store";
 import { useNutritionStore } from "@/store/nutrition-store";
 import Colors from "@/constants/colors";
 import { useRouter } from "expo-router";
-import { Send, Sparkles, Brain, Utensils, Target, Lightbulb, ChefHat, ShoppingCart } from "lucide-react-native";
+import { Send, Sparkles, Brain, Utensils, Target, Lightbulb, ChefHat, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -56,6 +56,7 @@ export default function AssistantScreen() {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [quickActionsExpanded, setQuickActionsExpanded] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   
   // Get today's nutrition data for smart suggestions
@@ -164,7 +165,6 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
       // Parse meal suggestions if the response contains them
       let suggestions: MealSuggestion[] | undefined;
       if (prompt.toLowerCase().includes('meal') && prompt.toLowerCase().includes('suggest')) {
-        // This is a simplified parser - in a real app you'd use more sophisticated parsing
         suggestions = parseMealSuggestions(aiText);
       }
       
@@ -176,10 +176,8 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
   };
   
   const parseMealSuggestions = (text: string): MealSuggestion[] => {
-    // Simple parser for meal suggestions - in a real app this would be more sophisticated
     const suggestions: MealSuggestion[] = [];
     
-    // Mock suggestions based on remaining macros
     if (remainingProtein > 20) {
       suggestions.push({
         name: "Grilled Chicken & Quinoa Bowl",
@@ -289,6 +287,10 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
   
   const handleQuickAction = (action: QuickAction) => {
     handleSend(action.prompt);
+  };
+  
+  const toggleQuickActions = () => {
+    setQuickActionsExpanded(!quickActionsExpanded);
   };
   
   const renderMealSuggestion = (suggestion: MealSuggestion, index: number) => (
@@ -457,17 +459,27 @@ Provide practical, evidence-based advice. When suggesting meals, be specific wit
               </View>
             </View>
             
-            <ThemedText size="lg" weight="semibold" style={styles.quickActionsTitle}>
-              Smart Actions
-            </ThemedText>
-            <FlatList
-              data={quickActions}
-              renderItem={renderQuickAction}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              scrollEnabled={false}
-              contentContainerStyle={styles.quickActionsList}
-            />
+            <Pressable onPress={toggleQuickActions} style={styles.quickActionsHeader}>
+              <ThemedText size="lg" weight="semibold" style={styles.quickActionsTitle}>
+                Smart Actions
+              </ThemedText>
+              {quickActionsExpanded ? (
+                <ChevronUp size={20} color={Colors[theme].text} />
+              ) : (
+                <ChevronDown size={20} color={Colors[theme].text} />
+              )}
+            </Pressable>
+            
+            {quickActionsExpanded && (
+              <FlatList
+                data={quickActions}
+                renderItem={renderQuickAction}
+                keyExtractor={(item) => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={styles.quickActionsList}
+              />
+            )}
           </View>
         )}
         
@@ -576,8 +588,14 @@ const styles = StyleSheet.create({
   progressItem: {
     alignItems: 'center',
   },
-  quickActionsTitle: {
+  quickActionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  quickActionsTitle: {
+    flex: 1,
   },
   quickActionsList: {
     gap: 8,

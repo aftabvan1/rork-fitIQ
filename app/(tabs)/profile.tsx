@@ -3,7 +3,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { useUserStore } from "@/store/user-store";
 import Colors from "@/constants/colors";
 import { useRouter } from "expo-router";
-import { Moon, Sun, Crown, Settings } from "lucide-react-native";
+import { Moon, Sun, Crown, Settings, Camera, User } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Alert,
@@ -17,6 +17,8 @@ import {
 import Button from "@/components/Button";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -34,6 +36,7 @@ export default function ProfileScreen() {
   const [weight, setWeight] = useState(user?.weight?.toString() || "");
   const [height, setHeight] = useState(user?.height?.toString() || "");
   const [age, setAge] = useState(user?.age?.toString() || "");
+  const [profilePicture, setProfilePicture] = useState(user?.profilePicture || "");
   
   const handleSaveGoals = () => {
     updateGoals(goals);
@@ -46,12 +49,60 @@ export default function ProfileScreen() {
       weight: weight ? parseFloat(weight) : undefined,
       height: height ? parseFloat(height) : undefined,
       age: age ? parseInt(age, 10) : undefined,
+      profilePicture,
     });
     Alert.alert("Success", "Profile updated successfully");
   };
   
   const handleUpgrade = () => {
     router.push("/subscription");
+  };
+  
+  const handleChangeProfilePicture = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        setProfilePicture(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Image picker error:", error);
+      Alert.alert("Error", "Failed to select image. Please try again.");
+    }
+  };
+  
+  const handleTakePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        setProfilePicture(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Camera error:", error);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
+    }
+  };
+  
+  const showImagePicker = () => {
+    Alert.alert(
+      "Change Profile Picture",
+      "Choose an option",
+      [
+        { text: "Camera", onPress: handleTakePhoto },
+        { text: "Photo Library", onPress: handleChangeProfilePicture },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
   };
   
   // For demo purposes only - in a real app this would be handled by a payment provider
@@ -85,6 +136,29 @@ export default function ProfileScreen() {
               <Settings size={24} color={Colors[theme].primary} />
               <ThemedText size="xl" weight="bold" style={styles.sectionTitle}>
                 Profile
+              </ThemedText>
+            </View>
+            
+            {/* Profile Picture */}
+            <View style={styles.profilePictureSection}>
+              <Pressable onPress={showImagePicker} style={styles.profilePictureContainer}>
+                {profilePicture ? (
+                  <Image
+                    source={{ uri: profilePicture }}
+                    style={styles.profilePicture}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.profilePicture, { backgroundColor: Colors[theme].primary + '20' }]}>
+                    <User size={40} color={Colors[theme].primary} />
+                  </View>
+                )}
+                <View style={[styles.cameraIcon, { backgroundColor: Colors[theme].primary }]}>
+                  <Camera size={16} color="#fff" />
+                </View>
+              </Pressable>
+              <ThemedText size="sm" color="subtext" style={styles.profilePictureText}>
+                Tap to change profile picture
               </ThemedText>
             </View>
             
@@ -364,6 +438,36 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     flex: 1,
+  },
+  profilePictureSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  profilePictureContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  profilePicture: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  profilePictureText: {
+    textAlign: 'center',
   },
   inputGroup: {
     marginBottom: 16,

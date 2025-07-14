@@ -23,6 +23,7 @@ const defaultUser: UserProfile = {
   id: '1',
   name: 'User',
   email: 'user@example.com',
+  profilePicture: '',
   goals: defaultGoals,
   isPremium: false,
   theme: 'light',
