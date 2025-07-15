@@ -21,6 +21,12 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="food-details" options={{ title: 'Food Details' }} />
+        <Stack.Screen name="subscription" options={{ title: 'Subscription' }} />
+        <Stack.Screen name="exercise-selector" options={{ title: 'Select Exercise' }} />
+        <Stack.Screen name="friends" options={{ title: 'Friends' }} />
+        <Stack.Screen name="friend-profile" options={{ title: 'Friend Profile' }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </ThemeProvider>
