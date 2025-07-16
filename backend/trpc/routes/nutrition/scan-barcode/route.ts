@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { publicProcedure } from "../../create-context";
+import { publicProcedure } from "../../../create-context";
+import { fetchProductFromOpenFoodFacts } from "../../../../services/openfoodfacts";
 
 // Mock barcode database - in a real app this would be a proper database
 const mockBarcodeDatabase: Record<string, any> = {
@@ -33,42 +34,7 @@ const mockBarcodeDatabase: Record<string, any> = {
   }
 };
 
-async function fetchFromOpenFoodFacts(barcode: string) {
-  try {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch product data');
-    }
-    
-    const data = await response.json();
-    
-    if (data.status === 0 || !data.product) {
-      return null;
-    }
-    
-    const product = data.product;
-    const nutriments = product.nutriments || {};
-    
-    return {
-      id: barcode,
-      name: product.product_name || product.product_name_en || 'Unknown Product',
-      brand: product.brands || undefined,
-      calories: nutriments.energy_kcal_100g || nutriments['energy-kcal_100g'] || 0,
-      protein: nutriments.proteins_100g || 0,
-      carbs: nutriments.carbohydrates_100g || 0,
-      fat: nutriments.fat_100g || 0,
-      fiber: nutriments.fiber_100g || 0,
-      sugar: nutriments.sugars_100g || 0,
-      sodium: nutriments.sodium_100g || 0,
-      servingSize: 100,
-      servingUnit: product.serving_size || '100g'
-    };
-  } catch (error) {
-    console.error('OpenFoodFacts API error:', error);
-    return null;
-  }
-}
+
 
 export const scanBarcodeProcedure = publicProcedure
   .input(z.object({ barcode: z.string() }))
@@ -76,7 +42,7 @@ export const scanBarcodeProcedure = publicProcedure
     const { barcode } = input;
     
     // First try OpenFoodFacts API
-    const openFoodFactsResult = await fetchFromOpenFoodFacts(barcode);
+    const openFoodFactsResult = await fetchProductFromOpenFoodFacts(barcode);
     
     if (openFoodFactsResult) {
       return {

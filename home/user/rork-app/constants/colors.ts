@@ -5,6 +5,7 @@ export default {
   light: {
     text: '#11181C',
     textSecondary: '#687076',
+    subtext: '#9CA3AF',
     background: '#FFFFFF',
     backgroundSecondary: '#F8FAFC',
     tint: tintColorLight,
@@ -20,11 +21,11 @@ export default {
     error: '#EF4444',
     errorBackground: '#FEF2F2',
     info: '#3B82F6',
-    subtext: '#687076',
   },
   dark: {
     text: '#ECEDEE',
     textSecondary: '#9BA1A6',
+    subtext: '#6B7280',
     background: '#151718',
     backgroundSecondary: '#1E2124',
     tint: tintColorDark,
@@ -40,7 +41,6 @@ export default {
     error: '#F87171',
     errorBackground: '#1F1415',
     info: '#60A5FA',
-    subtext: '#9BA1A6',
   },
   // Common colors
   white: '#FFFFFF',

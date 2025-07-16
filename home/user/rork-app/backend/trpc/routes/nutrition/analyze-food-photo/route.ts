@@ -1,127 +1,100 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 
+// Mock food recognition results - in a real app this would use AI/ML services
+const mockFoodRecognitionResults = [
+  {
+    id: "apple_detected",
+    name: "Apple",
+    brand: "Fresh",
+    calories: 52,
+    protein: 0.3,
+    carbs: 14,
+    fat: 0.2,
+    fiber: 2.4,
+    sugar: 10,
+    sodium: 1,
+    servingSize: 100,
+    servingUnit: "100g"
+  },
+  {
+    id: "banana_detected",
+    name: "Banana",
+    brand: "Fresh",
+    calories: 89,
+    protein: 1.1,
+    carbs: 23,
+    fat: 0.3,
+    fiber: 2.6,
+    sugar: 12,
+    sodium: 1,
+    servingSize: 100,
+    servingUnit: "100g"
+  },
+  {
+    id: "chicken_detected",
+    name: "Grilled Chicken Breast",
+    brand: "Prepared",
+    calories: 165,
+    protein: 31,
+    carbs: 0,
+    fat: 3.6,
+    fiber: 0,
+    sugar: 0,
+    sodium: 74,
+    servingSize: 100,
+    servingUnit: "100g"
+  }
+];
+
+async function analyzePhotoWithAI(imageUri: string) {
+  try {
+    // In a real app, you would send the image to an AI service
+    // For now, return a random mock result
+    const randomIndex = Math.floor(Math.random() * mockFoodRecognitionResults.length);
+    const randomResult = mockFoodRecognitionResults[randomIndex];
+    
+    // Add some randomness to make it feel more realistic
+    const confidence = 0.75 + Math.random() * 0.2; // 75-95% confidence
+    
+    return [{
+      ...randomResult,
+      id: `${randomResult.id}_${Date.now()}`,
+      confidence
+    }];
+  } catch (error) {
+    console.error('AI photo analysis error:', error);
+    throw new Error('Failed to analyze photo');
+  }
+}
+
 export const analyzeFoodPhotoProcedure = publicProcedure
   .input(z.object({ 
-    imageBase64: z.string(),
-    mimeType: z.string().optional()
+    imageUri: z.string(),
+    options: z.object({
+      maxResults: z.number().optional().default(3)
+    }).optional()
   }))
-  .mutation(async ({ input }) => {
-    const { imageBase64, mimeType = "image/jpeg" } = input;
+  .mutation(async ({ input }: { input: { imageUri: string; options?: { maxResults?: number } } }) => {
+    const { imageUri, options = {} } = input;
+    const { maxResults = 3 } = options;
     
     try {
-      // Use external AI service for food analysis
-      const aiResponse = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: `You are a nutrition expert. Analyze the food image and return a JSON array of foods you can identify. 
-              Each food should have: 
-              - id (generate a unique string like "food_1", "food_2")
-              - name (specific food name)
-              - brand (if visible, otherwise null)
-              - calories (per 100g, realistic estimate)
-              - protein (per 100g in grams)
-              - carbs (per 100g in grams)
-              - fat (per 100g in grams)
-              - fiber (per 100g in grams, estimate)
-              - sugar (per 100g in grams, estimate)
-              - sodium (per 100g in mg, estimate)
-              - servingSize (typical serving in grams)
-              - servingUnit (e.g., "1 cup", "1 piece", "100g")
-              
-              Only return the JSON array, no other text. Be conservative with estimates and only include foods you can clearly identify.`
-            },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: 'Analyze this food image and identify the foods present with their nutritional information.'
-                },
-                {
-                  type: 'image',
-                  image: imageBase64
-                }
-              ]
-            }
-          ]
-        }),
-      });
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (!aiResponse.ok) {
-        throw new Error('AI service unavailable');
-      }
+      const results = await analyzePhotoWithAI(imageUri);
       
-      const aiData = await aiResponse.json();
-      const foodsText = aiData.completion;
-      
-      try {
-        // Parse the JSON response from AI
-        const foods = JSON.parse(foodsText);
-        
-        if (!Array.isArray(foods)) {
-          throw new Error('Invalid AI response format');
-        }
-        
-        // Validate and clean the food data
-        const validatedFoods = foods
-          .filter((food: any) => food && food.name && typeof food.name === 'string')
-          .map((food: any) => ({
-            id: food.id || `ai_food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: food.name,
-            brand: food.brand || null,
-            calories: Math.max(0, Number(food.calories) || 0),
-            protein: Math.max(0, Number(food.protein) || 0),
-            carbs: Math.max(0, Number(food.carbs) || 0),
-            fat: Math.max(0, Number(food.fat) || 0),
-            fiber: Math.max(0, Number(food.fiber) || 0),
-            sugar: Math.max(0, Number(food.sugar) || 0),
-            sodium: Math.max(0, Number(food.sodium) || 0),
-            servingSize: Math.max(1, Number(food.servingSize) || 100),
-            servingUnit: food.servingUnit || '100g'
-          }))
-          .slice(0, 5); // Limit to 5 foods max
-        
-        return {
-          success: true,
-          data: validatedFoods
-        };
-      } catch (parseError) {
-        console.error('Failed to parse AI response:', parseError);
-        
-        // Fallback to generic food items
-        return {
-          success: true,
-          data: [
-            {
-              id: `fallback_${Date.now()}`,
-              name: "Mixed Food",
-              brand: null,
-              calories: 200,
-              protein: 10,
-              carbs: 20,
-              fat: 8,
-              fiber: 3,
-              sugar: 5,
-              sodium: 300,
-              servingSize: 100,
-              servingUnit: "100g"
-            }
-          ]
-        };
-      }
+      return {
+        success: true,
+        data: results.slice(0, maxResults)
+      };
     } catch (error) {
-      console.error('Analyze food photo error:', error);
+      console.error('Photo analysis error:', error);
       return {
         success: false,
-        data: [],
-        message: error instanceof Error ? error.message : "Failed to analyze food photo"
+        error: 'Failed to analyze photo',
+        data: []
       };
     }
   });

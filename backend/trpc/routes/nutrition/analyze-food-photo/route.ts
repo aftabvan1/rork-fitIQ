@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "../../create-context";
+import { publicProcedure } from "../../../create-context";
 
 // Mock food recognition results - in a real app this would use AI/ML services
 const mockFoodRecognitionResults = [
