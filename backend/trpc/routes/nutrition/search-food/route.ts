@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 export const searchFoodProcedure = publicProcedure
   .input(z.object({ query: z.string() }))
-  .query(({ input }: { input: { query: string } }) => {
+  .query(({ input }) => {
     // Mock food search results - in a real app this would query a food database
     const mockResults = [
       {

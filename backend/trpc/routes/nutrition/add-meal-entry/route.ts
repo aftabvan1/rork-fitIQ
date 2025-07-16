@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 // Mock meal entries storage - in a real app this would be a database
 const mealEntries: any[] = [];
@@ -22,23 +22,7 @@ export const addMealEntryProcedure = publicProcedure
     mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
     date: z.string() // ISO date string
   }))
-  .mutation(({ input }: { input: {
-    foodId: string;
-    name: string;
-    brand?: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    fiber?: number;
-    sugar?: number;
-    sodium?: number;
-    servingSize: number;
-    servingUnit: string;
-    quantity: number;
-    mealType: "breakfast" | "lunch" | "dinner" | "snack";
-    date: string;
-  } }) => {
+  .mutation(({ input }) => {
     const entry = {
       id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...input,
