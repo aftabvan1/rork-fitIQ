@@ -6,7 +6,7 @@ import { StyleProp, StyleSheet, Text, TextProps, TextStyle } from 'react-native'
 
 interface ThemedTextProps extends TextProps {
   style?: StyleProp<TextStyle>;
-  color?: keyof typeof Colors.light & keyof typeof Colors.dark;
+  color?: keyof typeof Colors.light | keyof typeof Colors.dark;
   size?: keyof typeof Theme.typography.sizes;
   weight?: keyof typeof Theme.typography.weights;
 }
