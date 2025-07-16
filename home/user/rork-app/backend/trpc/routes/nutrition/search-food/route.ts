@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 // Mock food database - fallback when OpenFoodFacts is unavailable
 const mockFoods = [
@@ -96,7 +96,7 @@ async function searchOpenFoodFacts(query: string) {
 
 export const searchFoodProcedure = publicProcedure
   .input(z.object({ query: z.string() }))
-  .query(async ({ input }) => {
+  .query(async ({ input }: { input: { query: string } }) => {
     const { query } = input;
     
     // First try OpenFoodFacts API

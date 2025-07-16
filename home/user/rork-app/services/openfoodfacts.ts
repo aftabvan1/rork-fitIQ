@@ -8,17 +8,11 @@ export interface OpenFoodFactsProduct {
     energy_kcal_100g?: number;
     'energy-kcal_100g'?: number;
     proteins_100g?: number;
-    'proteins_100g'?: number;
     carbohydrates_100g?: number;
-    'carbohydrates_100g'?: number;
     fat_100g?: number;
-    'fat_100g'?: number;
     fiber_100g?: number;
-    'fiber_100g'?: number;
     sugars_100g?: number;
-    'sugars_100g'?: number;
     sodium_100g?: number;
-    'sodium_100g'?: number;
   };
   serving_size?: string;
   image_url?: string;
@@ -94,7 +88,7 @@ export class OpenFoodFactsService {
     return {
       id,
       name: product.product_name || product.product_name_en || 'Unknown Product',
-      brand: product.brands || null,
+      brand: product.brands || undefined,
       calories: nutriments.energy_kcal_100g || nutriments['energy-kcal_100g'] || 0,
       protein: nutriments.proteins_100g || nutriments['proteins_100g'] || 0,
       carbs: nutriments.carbohydrates_100g || nutriments['carbohydrates_100g'] || 0,

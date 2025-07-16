@@ -162,7 +162,7 @@ export default function ScanScreen() {
         <ThemedText size="xl" weight="semibold" style={styles.permissionTitle}>
           Camera Permission Required
         </ThemedText>
-        <ThemedText color="subtext" style={styles.permissionText}>
+        <ThemedText color="textSecondary" style={styles.permissionText}>
           We need camera permission to scan barcodes and take food photos.
         </ThemedText>
         <Button
@@ -195,7 +195,7 @@ export default function ScanScreen() {
           renderItem={({ item }) => (
             <View>
               {item.confidence && (
-                <ThemedText size="sm" color="subtext" style={styles.confidenceText}>
+                <ThemedText size="sm" color="textSecondary" style={styles.confidenceText}>
                   Confidence: {Math.round(item.confidence * 100)}%
                 </ThemedText>
               )}
@@ -228,7 +228,7 @@ export default function ScanScreen() {
         {lastScannedBarcode ? 'Looking up product...' : 'Analyzing...'}
       </ThemedText>
       {lastScannedBarcode && (
-        <ThemedText size="sm" color="subtext" style={styles.barcodeText}>
+        <ThemedText size="sm" color="textSecondary" style={styles.barcodeText}>
           Barcode: {lastScannedBarcode}
         </ThemedText>
       )}

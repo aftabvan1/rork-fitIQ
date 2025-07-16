@@ -20,6 +20,7 @@ export default {
     error: '#EF4444',
     errorBackground: '#FEF2F2',
     info: '#3B82F6',
+    subtext: '#687076',
   },
   dark: {
     text: '#ECEDEE',
@@ -39,6 +40,7 @@ export default {
     error: '#F87171',
     errorBackground: '#1F1415',
     info: '#60A5FA',
+    subtext: '#9BA1A6',
   },
   // Common colors
   white: '#FFFFFF',

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 const mealEntrySchema = z.object({
   foodName: z.string(),
@@ -18,7 +18,7 @@ const mealEntrySchema = z.object({
 
 export const addMealEntryProcedure = publicProcedure
   .input(mealEntrySchema)
-  .mutation(({ input }) => {
+  .mutation(({ input }: { input: z.infer<typeof mealEntrySchema> }) => {
     // In a real app, this would save to a database
     // For now, just return a mock response
     const id = `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
