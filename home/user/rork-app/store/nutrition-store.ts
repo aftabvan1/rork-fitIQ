@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiService } from '@/services/api';
+import { trpcClient } from '@/lib/trpc';
 import { DailyNutrition, Food, MealEntry, MealType } from '@/types';
 import { fallbackFoods, createMockMealEntry } from '@/utils/mockData';
 
@@ -44,7 +44,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
   fetchDailyNutrition: async (date: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiService.getDailyNutrition(date);
+      const response = await trpcClient.nutrition.getDailyNutrition.query({ date });
       const dailyNutrition = response.data || createEmptyDailyNutrition(date);
       
       set((state) => ({
@@ -70,8 +70,31 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
   addMealEntry: async (entry) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiService.addMealEntry(entry);
-      const newEntry = response.data;
+      // Convert the entry to the format expected by tRPC
+      const mealEntryData = {
+        foodName: entry.food.name,
+        quantity: entry.quantity,
+        unit: entry.food.servingUnit,
+        mealType: entry.mealType,
+        calories: entry.food.calories,
+        protein: entry.food.protein,
+        carbs: entry.food.carbs,
+        fat: entry.food.fat,
+        fiber: (entry.food as any).fiber || 0,
+        sugar: (entry.food as any).sugar || 0,
+        sodium: (entry.food as any).sodium || 0,
+        date: entry.date,
+      };
+      
+      const response = await trpcClient.nutrition.addMealEntry.mutate(mealEntryData);
+      const newEntry: MealEntry = {
+        id: response.data.id,
+        food: entry.food,
+        quantity: entry.quantity,
+        mealType: entry.mealType,
+        date: entry.date,
+        createdAt: response.data.createdAt,
+      };
       
       // Update local state
       const { date, mealType } = entry;
@@ -114,7 +137,8 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
   updateMealEntry: async (entry) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.updateMealEntry(entry.id, entry);
+      // For now, just update locally since we don't have update endpoint in tRPC yet
+      // await trpcClient.nutrition.updateMealEntry.mutate({ id: entry.id, ...entry });
       
       // Update local state
       set((state) => {
@@ -172,7 +196,8 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
   removeMealEntry: async (entryId, date) => {
     set({ isLoading: true, error: null });
     try {
-      await apiService.deleteMealEntry(entryId);
+      // For now, just update locally since we don't have delete endpoint in tRPC yet
+      // await trpcClient.nutrition.deleteMealEntry.mutate({ id: entryId });
       
       // Update local state
       set((state) => {
@@ -230,8 +255,20 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
   searchFood: async (query: string) => {
     try {
-      const response = await apiService.searchFood(query);
-      return response.data || [];
+      const response = await trpcClient.nutrition.searchFood.query({ query });
+      // Convert the response to match our Food interface
+      const foods: Food[] = response.data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        servingSize: 100, // Default to 100g
+        servingUnit: item.servingSize || '100g',
+      }));
+      return foods;
     } catch (error) {
       console.error('Search food error:', error);
       // Fallback to local search only if backend is unavailable
@@ -245,8 +282,10 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
   scanBarcode: async (barcode: string) => {
     try {
-      const response = await apiService.getFoodByBarcode(barcode);
-      return response.data || null;
+      // For now, use fallback since we don't have barcode endpoint in tRPC yet
+      // const response = await trpcClient.nutrition.getFoodByBarcode.query({ barcode });
+      // return response.data || null;
+      return fallbackFoods[0] || null;
     } catch (error) {
       console.error('Scan barcode error:', error);
       // Fallback to mock data only if backend is unavailable
