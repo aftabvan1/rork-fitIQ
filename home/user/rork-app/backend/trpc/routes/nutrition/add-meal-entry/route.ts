@@ -5,7 +5,7 @@ const mealEntrySchema = z.object({
   foodName: z.string(),
   quantity: z.number(),
   unit: z.string(),
-  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
   calories: z.number(),
   protein: z.number(),
   carbs: z.number(),
@@ -20,19 +20,15 @@ export const addMealEntryProcedure = publicProcedure
   .input(mealEntrySchema)
   .mutation(({ input }) => {
     // In a real app, this would save to a database
-    // For now, we'll just return a success response with the entry
-    const entry = {
-      id: `entry_${Date.now()}`,
-      ...input,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    console.log('Adding meal entry:', entry);
-
+    // For now, just return a mock response
+    const id = `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     return {
       success: true,
-      data: entry,
-      message: 'Meal entry added successfully',
+      data: {
+        id,
+        ...input,
+        createdAt: new Date().toISOString(),
+      }
     };
   });

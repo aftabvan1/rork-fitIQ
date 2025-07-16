@@ -1,10 +1,12 @@
 import { publicProcedure } from "../../create-context";
 
-export default publicProcedure
+const healthRoute = publicProcedure
   .query(() => {
     return {
-      status: 'ok',
-      message: 'tRPC API is running',
-      timestamp: new Date().toISOString(),
+      status: "ok",
+      message: "Backend is healthy",
+      timestamp: new Date().toISOString()
     };
   });
+
+export default healthRoute;

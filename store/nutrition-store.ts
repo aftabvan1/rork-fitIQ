@@ -282,10 +282,23 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
   scanBarcode: async (barcode: string) => {
     try {
-      // For now, use fallback since we don't have barcode endpoint in tRPC yet
-      // const response = await trpcClient.nutrition.getFoodByBarcode.query({ barcode });
-      // return response.data || null;
-      return fallbackFoods[0] || null;
+      const response = await trpcClient.nutrition.scanBarcode.query({ barcode });
+      if (response.success && response.data) {
+        // Convert the response to match our Food interface
+        const food: Food = {
+          id: response.data.id,
+          name: response.data.name,
+          brand: response.data.brand,
+          calories: response.data.calories,
+          protein: response.data.protein,
+          carbs: response.data.carbs,
+          fat: response.data.fat,
+          servingSize: response.data.servingSize,
+          servingUnit: response.data.servingUnit,
+        };
+        return food;
+      }
+      return null;
     } catch (error) {
       console.error('Scan barcode error:', error);
       // Fallback to mock data only if backend is unavailable
@@ -307,51 +320,30 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         reader.readAsDataURL(blob);
       });
 
-      // Use external AI service for food analysis
-      const aiResponse = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a nutrition expert. Analyze the food image and return a JSON array of foods you can identify. Each food should have: id (generate a unique string), name, brand (if applicable, otherwise null), calories (per 100g), protein (per 100g), carbs (per 100g), fat (per 100g), fiber (per 100g), sugar (per 100g), sodium (per 100g), servingSize (typical serving in grams), servingUnit (e.g., "1 cup", "1 piece"). Only return the JSON array, no other text.'
-            },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: 'Analyze this food image and identify the foods present.'
-                },
-                {
-                  type: 'image',
-                  image: base64
-                }
-              ]
-            }
-          ]
-        }),
+      // Use backend tRPC endpoint for food analysis
+      const analysisResponse = await trpcClient.nutrition.analyzeFoodPhoto.mutate({
+        imageBase64: base64,
+        mimeType: 'image/jpeg'
       });
       
-      if (!aiResponse.ok) {
-        throw new Error('AI service unavailable');
+      if (analysisResponse.success && analysisResponse.data) {
+        // Convert the response to match our Food interface
+        const foods: Food[] = analysisResponse.data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          brand: item.brand,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          servingSize: item.servingSize,
+          servingUnit: item.servingUnit,
+        }));
+        return foods;
       }
       
-      const aiData = await aiResponse.json();
-      const foodsText = aiData.completion;
-      
-      try {
-        // Parse the JSON response from AI
-        const foods = JSON.parse(foodsText);
-        return Array.isArray(foods) ? foods : [];
-      } catch (parseError) {
-        console.error('Failed to parse AI response:', parseError);
-        // Fallback to demo results
-        return fallbackFoods.slice(0, 2);
-      }
+      // Fallback to demo results if no foods found
+      return fallbackFoods.slice(0, 2);
     } catch (error) {
       console.error('Analyze food photo error:', error);
       // Fallback to demo results

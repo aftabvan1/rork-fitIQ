@@ -4,6 +4,8 @@ import healthRoute from "./routes/health/route";
 import { addMealEntryProcedure } from "./routes/nutrition/add-meal-entry/route";
 import { getDailyNutritionProcedure } from "./routes/nutrition/get-daily-nutrition/route";
 import { searchFoodProcedure } from "./routes/nutrition/search-food/route";
+import { scanBarcodeProcedure } from "./routes/nutrition/scan-barcode/route";
+import { analyzeFoodPhotoProcedure } from "./routes/nutrition/analyze-food-photo/route";
 
 export const appRouter = createTRPCRouter({
   health: healthRoute,
@@ -14,6 +16,8 @@ export const appRouter = createTRPCRouter({
     addMealEntry: addMealEntryProcedure,
     getDailyNutrition: getDailyNutritionProcedure,
     searchFood: searchFoodProcedure,
+    scanBarcode: scanBarcodeProcedure,
+    analyzeFoodPhoto: analyzeFoodPhotoProcedure,
   }),
 });
 
