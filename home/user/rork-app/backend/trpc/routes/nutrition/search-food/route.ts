@@ -4,45 +4,37 @@ import { publicProcedure } from "../../../create-context";
 export const searchFoodProcedure = publicProcedure
   .input(z.object({ query: z.string() }))
   .query(({ input }: { input: { query: string } }) => {
-    // In a real app, this would search a food database
-    // For now, return mock search results
+    // Mock search results for now
     const mockResults = [
       {
-        id: "apple_001",
-        name: "Apple",
-        brand: "Fresh",
-        calories: 52,
-        protein: 0.3,
-        carbs: 14,
-        fat: 0.2,
-        fiber: 2.4,
-        sugar: 10,
-        sodium: 1,
-        servingSize: 100,
-        servingUnit: "100g"
+        id: '1',
+        name: 'Apple',
+        brand: 'Generic',
+        calories: 95,
+        protein: 0.5,
+        carbs: 25,
+        fat: 0.3,
+        fiber: 4,
+        sugar: 19,
+        sodium: 2,
+        servingSize: '1 medium (182g)'
       },
       {
-        id: "banana_001", 
-        name: "Banana",
-        brand: "Fresh",
-        calories: 89,
-        protein: 1.1,
-        carbs: 23,
-        fat: 0.3,
-        fiber: 2.6,
-        sugar: 12,
+        id: '2',
+        name: 'Banana',
+        brand: 'Generic',
+        calories: 105,
+        protein: 1.3,
+        carbs: 27,
+        fat: 0.4,
+        fiber: 3,
+        sugar: 14,
         sodium: 1,
-        servingSize: 100,
-        servingUnit: "100g"
+        servingSize: '1 medium (118g)'
       }
     ];
 
-    const filteredResults = mockResults.filter(food => 
-      food.name.toLowerCase().includes(input.query.toLowerCase())
+    return mockResults.filter(item => 
+      item.name.toLowerCase().includes(input.query.toLowerCase())
     );
-
-    return {
-      success: true,
-      data: filteredResults
-    };
   });
