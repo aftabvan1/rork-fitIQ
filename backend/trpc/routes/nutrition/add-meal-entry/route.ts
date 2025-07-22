@@ -1,14 +1,15 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 // Simple in-memory storage - in a real app this would be a database
 const mealEntries: any[] = [];
 const dailyNutritionCache: Record<string, any> = {};
 
 const addMealEntrySchema = z.object({
-  foodId: z.string(),
-  name: z.string(),
-  brand: z.string().optional(),
+  foodName: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
   calories: z.number(),
   protein: z.number(),
   carbs: z.number(),
@@ -16,11 +17,7 @@ const addMealEntrySchema = z.object({
   fiber: z.number().optional(),
   sugar: z.number().optional(),
   sodium: z.number().optional(),
-  servingSize: z.number(),
-  servingUnit: z.string(),
-  quantity: z.number().default(1),
-  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
-  date: z.string() // ISO date string
+  date: z.string()
 });
 
 export const addMealEntryProcedure = publicProcedure

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
-import { searchFoodInOpenFoodFacts } from "@/services/openfoodfacts";
+import { publicProcedure } from "../../create-context";
+import { searchFoodInOpenFoodFacts } from "../../../../../services/openfoodfacts";
 
 const searchFoodSchema = z.object({ query: z.string() });
 
 export const searchFoodProcedure = publicProcedure
   .input(searchFoodSchema)
-  .query(async ({ input }) => {
+  .query(async ({ input }: { input: z.infer<typeof searchFoodSchema> }) => {
     try {
       // First try OpenFoodFacts API
       const openFoodFactsResults = await searchFoodInOpenFoodFacts(input.query, 10);
