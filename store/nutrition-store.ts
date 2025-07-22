@@ -72,10 +72,9 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     try {
       // Convert the entry to the format expected by tRPC
       const mealEntryData = {
-        foodName: entry.food.name,
-        quantity: entry.quantity,
-        unit: entry.food.servingUnit,
-        mealType: entry.mealType,
+        foodId: entry.food.id,
+        name: entry.food.name,
+        brand: entry.food.brand,
         calories: entry.food.calories,
         protein: entry.food.protein,
         carbs: entry.food.carbs,
@@ -83,6 +82,10 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         fiber: (entry.food as any).fiber || 0,
         sugar: (entry.food as any).sugar || 0,
         sodium: (entry.food as any).sodium || 0,
+        servingSize: entry.food.servingSize,
+        servingUnit: entry.food.servingUnit,
+        quantity: entry.quantity,
+        mealType: entry.mealType,
         date: entry.date,
       };
       
