@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "../../../create-context";
+import { publicProcedure } from "../../create-context";
 
 export const getDailyNutritionProcedure = publicProcedure
   .input(z.object({ date: z.string() }))

@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { publicProcedure } from "../../create-context";
 
+const getDailyNutritionSchema = z.object({ date: z.string() });
+
 export const getDailyNutritionProcedure = publicProcedure
-  .input(z.object({ date: z.string() }))
-  .query(({ input }) => {
+  .input(getDailyNutritionSchema)
+  .query(({ input }: { input: z.infer<typeof getDailyNutritionSchema> }) => {
     // Mock daily nutrition data - in a real app this would query the database
     const mockNutrition = {
       date: input.date,
