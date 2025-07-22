@@ -22,7 +22,7 @@ const addMealEntrySchema = z.object({
 
 export const addMealEntryProcedure = publicProcedure
   .input(addMealEntrySchema)
-  .mutation(({ input }) => {
+  .mutation(({ input }: { input: z.infer<typeof addMealEntrySchema> }) => {
     const entry = {
       id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...input,
