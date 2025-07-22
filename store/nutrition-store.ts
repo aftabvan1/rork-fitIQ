@@ -45,7 +45,21 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await trpcClient.nutrition.getDailyNutrition.query({ date });
-      const dailyNutrition = response.data || createEmptyDailyNutrition(date);
+      // Convert backend response to our DailyNutrition format
+      const backendData = response.data;
+      const dailyNutrition: DailyNutrition = backendData ? {
+        date: backendData.date,
+        calories: backendData.totalCalories || 0,
+        protein: backendData.totalProtein || 0,
+        carbs: backendData.totalCarbs || 0,
+        fat: backendData.totalFat || 0,
+        meals: {
+          breakfast: backendData.meals?.breakfast?.entries || [],
+          lunch: backendData.meals?.lunch?.entries || [],
+          dinner: backendData.meals?.dinner?.entries || [],
+          snack: backendData.meals?.snack?.entries || [],
+        },
+      } : createEmptyDailyNutrition(date);
       
       set((state) => ({
         dailyLogs: {
@@ -72,10 +86,9 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     try {
       // Convert the entry to the format expected by tRPC
       const mealEntryData = {
-        foodName: entry.food.name,
-        quantity: entry.quantity,
-        unit: entry.food.servingUnit,
-        mealType: entry.mealType,
+        foodId: entry.food.id,
+        name: entry.food.name,
+        brand: (entry.food as any).brand || undefined,
         calories: entry.food.calories,
         protein: entry.food.protein,
         carbs: entry.food.carbs,
@@ -83,6 +96,10 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
         fiber: (entry.food as any).fiber || 0,
         sugar: (entry.food as any).sugar || 0,
         sodium: (entry.food as any).sodium || 0,
+        servingSize: entry.food.servingSize,
+        servingUnit: entry.food.servingUnit,
+        quantity: entry.quantity,
+        mealType: entry.mealType,
         date: entry.date,
       };
       
@@ -322,8 +339,8 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
       // Use backend tRPC endpoint for food analysis
       const analysisResponse = await trpcClient.nutrition.analyzeFoodPhoto.mutate({
-        imageBase64: base64,
-        mimeType: 'image/jpeg'
+        imageUri: imageUri,
+        options: { maxResults: 5 }
       });
       
       if (analysisResponse.success && analysisResponse.data) {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
-import { fetchProductFromOpenFoodFacts } from "../../../../services/openfoodfacts";
+import { fetchProductFromOpenFoodFacts } from "@/services/openfoodfacts";
 
 // Mock barcode database - in a real app this would be a proper database
 const mockBarcodeDatabase: Record<string, any> = {
@@ -38,7 +38,7 @@ const mockBarcodeDatabase: Record<string, any> = {
 
 export const scanBarcodeProcedure = publicProcedure
   .input(z.object({ barcode: z.string() }))
-  .query(async ({ input }: { input: { barcode: string } }) => {
+  .query(async ({ input }) => {
     const { barcode } = input;
     
     // First try OpenFoodFacts API

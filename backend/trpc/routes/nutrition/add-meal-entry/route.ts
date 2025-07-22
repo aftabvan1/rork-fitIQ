@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { publicProcedure } from "../../create-context";
+import { publicProcedure } from "../../../create-context";
 
-// Mock meal entries storage - in a real app this would be a database
+// Simple in-memory storage - in a real app this would be a database
 const mealEntries: any[] = [];
+const dailyNutritionCache: Record<string, any> = {};
 
 const addMealEntrySchema = z.object({
   foodId: z.string(),
@@ -24,7 +25,7 @@ const addMealEntrySchema = z.object({
 
 export const addMealEntryProcedure = publicProcedure
   .input(addMealEntrySchema)
-  .mutation(({ input }: { input: z.infer<typeof addMealEntrySchema> }) => {
+  .mutation(({ input }) => {
     const entry = {
       id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...input,
