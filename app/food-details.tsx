@@ -3,7 +3,7 @@ import { useNutritionStore } from "@/store/nutrition-store";
 import { useThemeStore } from "@/store/theme-store";
 import Colors from "@/constants/colors";
 import { formatDate } from "@/utils/dateUtils";
-import { mockFoods } from "@/utils/mockData";
+import { fallbackFoods } from "@/utils/mockData";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -29,6 +29,7 @@ export default function FoodDetailsScreen() {
     action?: string;
     mealType?: MealType;
     date?: string;
+    foodData?: string; // JSON string of food data
   }>();
   
   const { addMealEntry, removeMealEntry, updateMealEntry, dailyLogs } = useNutritionStore();
@@ -41,17 +42,46 @@ export default function FoodDetailsScreen() {
   const [selectedDate, setSelectedDate] = useState(
     params.date || formatDate(new Date())
   );
+  const [isLoading, setIsLoading] = useState(true);
   
   // Find the food item
   useEffect(() => {
-    if (params.id) {
-      // In a real app, this would be an API call
-      const foundFood = mockFoods.find((f) => f.id === params.id);
-      if (foundFood) {
-        setFood(foundFood);
+    const loadFood = async () => {
+      setIsLoading(true);
+      
+      try {
+        // First check if food data was passed directly
+        if (params.foodData) {
+          const foodData = JSON.parse(params.foodData);
+          setFood(foodData);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Then check if we have an ID to look up
+        if (params.id) {
+          // First try to find in fallback foods
+          const foundFood = fallbackFoods.find((f) => f.id === params.id);
+          if (foundFood) {
+            setFood(foundFood);
+            setIsLoading(false);
+            return;
+          }
+          
+          // If not found in fallback, the food might be from a scan result
+          // In this case, we should have received the food data directly
+          console.warn('Food ID not found in fallback foods:', params.id);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading food data:', error);
+        setIsLoading(false);
       }
-    }
-  }, [params.id]);
+    };
+    
+    loadFood();
+  }, [params.id, params.foodData]);
   
   // If editing an existing entry, load its data
   useEffect(() => {
@@ -130,10 +160,32 @@ export default function FoodDetailsScreen() {
     }
   };
   
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ThemedText>Loading food details...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+  
   if (!food) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
+        <View style={styles.errorContainer}>
+          <ThemedText size="lg" weight="semibold" style={styles.errorTitle}>
+            Food Not Found
+          </ThemedText>
+          <ThemedText color="textSecondary" style={styles.errorText}>
+            The food item could not be loaded. Please try again.
+          </ThemedText>
+          <Button
+            title="Go Back"
+            onPress={() => router.back()}
+            style={styles.errorButton}
+          />
+        </View>
       </ThemedView>
     );
   }
@@ -367,5 +419,28 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorButton: {
+    width: '100%',
+    maxWidth: 300,
   },
 });

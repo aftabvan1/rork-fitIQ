@@ -2,7 +2,7 @@ import { useNutritionStore } from "@/store/nutrition-store";
 import { useUserStore } from "@/store/user-store";
 import { useFriendsStore } from "@/store/friends-store";
 import { formatDate } from "@/utils/dateUtils";
-import { mockFoods } from "@/utils/mockData";
+import { fallbackFoods } from "@/utils/mockData";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, ScrollView, StyleSheet, View } from "react-native";
@@ -43,16 +43,24 @@ export default function DashboardScreen() {
   };
   
   const handleFoodPress = (foodId: string) => {
+    const food = fallbackFoods.find(f => f.id === foodId) || recentFoods.find(f => f.id === foodId);
     router.push({
       pathname: "/food-details",
-      params: { id: foodId },
+      params: { 
+        id: foodId,
+        foodData: food ? JSON.stringify(food) : undefined
+      },
     });
   };
   
   const handleAddFood = (food: any) => {
     router.push({
       pathname: "/food-details",
-      params: { id: food.id, action: "add" },
+      params: { 
+        id: food.id, 
+        action: "add",
+        foodData: JSON.stringify(food)
+      },
     });
   };
   
@@ -74,7 +82,7 @@ export default function DashboardScreen() {
   // Initialize with some mock data if empty (only once)
   useEffect(() => {
     if (!initialized && recentFoods.length === 0) {
-      mockFoods.slice(0, 3).forEach((food, index) => {
+      fallbackFoods.slice(0, 3).forEach((food: any, index: number) => {
         setTimeout(() => {
           addMealEntry({
             food,

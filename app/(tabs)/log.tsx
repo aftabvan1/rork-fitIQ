@@ -32,7 +32,12 @@ export default function LogScreen() {
   const handleEntryPress = (entry: MealEntry) => {
     router.push({
       pathname: "/food-details",
-      params: { id: entry.food.id, entryId: entry.id, date: entry.date },
+      params: { 
+        id: entry.food.id, 
+        entryId: entry.id, 
+        date: entry.date,
+        foodData: JSON.stringify(entry.food)
+      },
     });
   };
   

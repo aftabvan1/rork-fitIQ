@@ -21,6 +21,10 @@ export default {
     error: '#EF4444',
     errorBackground: '#FEF2F2',
     info: '#3B82F6',
+    // Macro colors
+    protein: '#EF4444',
+    carbs: '#3B82F6',
+    fat: '#F59E0B',
   },
   dark: {
     text: '#ECEDEE',
@@ -41,6 +45,10 @@ export default {
     error: '#F87171',
     errorBackground: '#1F1415',
     info: '#60A5FA',
+    // Macro colors
+    protein: '#F87171',
+    carbs: '#60A5FA',
+    fat: '#FBBF24',
   },
   // Common colors
   white: '#FFFFFF',

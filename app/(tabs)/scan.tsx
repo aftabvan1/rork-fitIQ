@@ -142,7 +142,11 @@ export default function ScanScreen() {
   const handleFoodPress = (food: any) => {
     router.push({
       pathname: "/food-details",
-      params: { id: food.id, action: "add" },
+      params: { 
+        id: food.id, 
+        action: "add",
+        foodData: JSON.stringify(food)
+      },
     });
   };
   
